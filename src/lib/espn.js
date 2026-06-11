@@ -100,9 +100,20 @@ export async function fetchStandings() {
 }
 
 /* Match summary: timeline, lineups, game info. Each section parsed independently. */
+/* Stat rows worth showing, with the ESPN names they ship under. */
+const STAT_ROWS = [
+  ["Possession %", ["possessionPct"]],
+  ["Shots", ["totalShots", "shots"]],
+  ["On target", ["shotsOnTarget", "ontargetShots"]],
+  ["Corners", ["wonCorners", "cornerKicks"]],
+  ["Fouls", ["foulsCommitted", "fouls"]],
+  ["Saves", ["saves"]],
+  ["Offsides", ["offsides"]],
+];
+
 export async function fetchSummary(eventId) {
   const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/summary?event=${encodeURIComponent(eventId)}`);
-  const out = { events: null, lineups: null, info: null };
+  const out = { events: null, lineups: null, info: null, stats: null, commentary: null };
 
   try {
     const list = data.keyEvents || [];
@@ -148,6 +159,44 @@ export async function fetchSummary(eventId) {
     }
     if (sides.home || sides.away) out.lineups = sides;
   } catch { /* lineups unavailable */ }
+
+  try {
+    // boxscore.teams usually carries homeAway; the header competitors map is
+    // the fallback for payloads where it doesn't.
+    const sideById = {};
+    for (const c of data.header?.competitions?.[0]?.competitors || []) {
+      if (c.team?.id) sideById[String(c.team.id)] = c.homeAway;
+    }
+    const sides = {};
+    for (const t of data.boxscore?.teams || []) {
+      const side = t.homeAway || sideById[String(t.team?.id)];
+      if (side !== "home" && side !== "away") continue;
+      const byName = {};
+      for (const s of t.statistics || []) byName[s.name] = s.displayValue ?? s.value;
+      sides[side] = byName;
+    }
+    if (sides.home && sides.away) {
+      const pick = (m, names) => names.map((n) => m[n]).find((v) => v !== undefined) ?? null;
+      const rows = STAT_ROWS
+        .map(([label, names]) => ({ label, home: pick(sides.home, names), away: pick(sides.away, names) }))
+        .filter((r) => r.home !== null && r.away !== null);
+      if (rows.length) out.stats = rows;
+    }
+  } catch { /* stats unavailable */ }
+
+  try {
+    const list = (data.commentary || [])
+      .map((c) => ({
+        minute: c.time?.displayValue || c.play?.clock?.displayValue || "",
+        text: c.text || c.play?.text || "",
+        seq: Number(c.sequence ?? c.play?.sequence ?? 0),
+      }))
+      .filter((c) => c.text);
+    if (list.length) {
+      list.sort((a, b) => b.seq - a.seq); // latest first
+      out.commentary = list.slice(0, 150); // cap localStorage weight per match
+    }
+  } catch { /* commentary unavailable */ }
 
   try {
     const gi = data.gameInfo || {};

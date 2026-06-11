@@ -82,6 +82,31 @@ export function teamPrompt(team, standings, fixtures) {
 
 /* Emergency fallback when ESPN is unreachable — uses Google Search grounding,
    so the answer is clearly labelled as approximate in the UI. */
+export function h2hPrompt(match, allMatches) {
+  const form = (t) =>
+    allMatches
+      .filter((m) => m.state === "post" && (m.home.code === t.code || m.away.code === t.code))
+      .map((m) => `- ${m.home.name} ${m.hg}-${m.ag} ${m.away.name} (${m.stage})`);
+  const lines = [
+    `Write a head-to-head and form guide for ${match.home.name} vs ${match.away.name} at the FIFA World Cup 2026.`,
+  ];
+  for (const t of [match.home, match.away]) {
+    if (t.trivia) lines.push(`${t.name} background: ${t.trivia}`);
+    const f = form(t);
+    if (f.length) {
+      lines.push(`${t.name} results this tournament (authoritative):`, ...f);
+    } else {
+      lines.push(`${t.name}: no completed matches this tournament yet.`);
+    }
+  }
+  lines.push(
+    "Cover their World Cup head-to-head history and memorable past meetings from your knowledge, their current " +
+      "form using only the results listed above, and who the pattern favours. If you are unsure of exact " +
+      "historical numbers, describe the history qualitatively rather than inventing counts."
+  );
+  return lines.join("\n");
+}
+
 /* Qualification scenarios during groups; knockout path once seeded. */
 export function roadPrompt(team, standings, third, fixtures, rounds) {
   const lines = [
