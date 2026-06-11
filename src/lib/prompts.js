@@ -82,6 +82,46 @@ export function teamPrompt(team, standings, fixtures) {
 
 /* Emergency fallback when ESPN is unreachable — uses Google Search grounding,
    so the answer is clearly labelled as approximate in the UI. */
+/* Qualification scenarios during groups; knockout path once seeded. */
+export function roadPrompt(team, standings, third, fixtures, rounds) {
+  const lines = [
+    `Explain the road ahead for ${team.name} at the FIFA World Cup 2026 — exactly what fans checking qualification scenarios want to know.`,
+    "Format rules (authoritative): 12 groups of 4; the top 2 of each group AND the 8 best third-placed teams advance to a Round of 32, then R16, QF, SF and the final.",
+  ];
+  const g = standings?.[team.group];
+  if (g?.length) {
+    lines.push(`Current Group ${team.group} table (authoritative):`);
+    g.forEach((r, i) => lines.push(`${i + 1}. ${row(r)}`));
+  }
+  const left = fixtures.filter((m) => m.state !== "post");
+  if (left.length) {
+    lines.push("Their remaining fixtures (authoritative):");
+    for (const m of left) {
+      const p = istParts(m.kickoff);
+      lines.push(`- ${m.home.name} vs ${m.away.name} (${m.stage})${p ? ` — ${p.day}, ${p.time} IST` : ""}`);
+    }
+  }
+  if (third?.length) {
+    lines.push("Third-place ranking across all groups (authoritative; top 8 advance):");
+    for (const r of third) {
+      lines.push(`${r.rank}. Group ${r.group} ${r.team.name}: ${row(r)}${r.qualified ? "" : " — currently OUT"}`);
+    }
+  }
+  const ko = (rounds || []).flatMap((r) =>
+    (r.matches || []).filter(Boolean).map((m) => `- ${r.label}: ${m.home.name} vs ${m.away.name}`)
+  );
+  if (ko.length) {
+    lines.push("Knockout bracket so far (authoritative; TBD = not yet decided):");
+    lines.push(...ko);
+  }
+  lines.push(
+    "Spell out concretely what results they need: best case, worst case, and which other matches matter. " +
+      "If their group is finished, describe their knockout path and likely opponents instead. " +
+      "Be precise with the points math and never invent results that are not listed above."
+  );
+  return lines.join("\n");
+}
+
 export function playerPrompt(player, team) {
   return [
     `Write a short profile of ${player.name}, in the ${team.name} squad at the FIFA World Cup 2026.`,

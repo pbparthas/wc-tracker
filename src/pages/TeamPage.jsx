@@ -7,12 +7,14 @@ import FavoriteStar from "../components/FavoriteStar.jsx";
 import PlayerSheet from "../components/PlayerSheet.jsx";
 import { TEAMS, GROUPS } from "../data/teams.js";
 import { espnTeamId } from "../lib/espn.js";
+import { computeThirdPlace } from "../lib/thirdPlace.js";
+import { assembleBracket } from "../lib/bracket.js";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
 import { useRoster } from "../hooks/useRoster.js";
 import { useAiContent } from "../hooks/useAiContent.js";
 import { useFavorites } from "../hooks/useFavorites.js";
-import { teamPrompt } from "../lib/prompts.js";
+import { teamPrompt, roadPrompt } from "../lib/prompts.js";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
@@ -74,6 +76,15 @@ export default function TeamPage() {
   const roster = useRoster(code, espnTeamId(inFixture));
   const deepDive = useAiContent("team:" + code, () => teamPrompt(team, standings, fixtures), { ttlMs: WEEK });
 
+  // Keyed by results played so far — every new final score invalidates the
+  // cached scenario text, which is exactly when the maths changes.
+  const played = fixtures.filter((m) => m.state === "post").length;
+  const road = useAiContent(
+    `road:${code}:${played}`,
+    () => roadPrompt(team, standings, computeThirdPlace(standings), fixtures, assembleBracket(matches)),
+    { ttlMs: 6 * 60 * 60 * 1000 }
+  );
+
   if (!team) {
     return (
       <div className="wrap" style={{ paddingTop: 20 }}>
@@ -108,6 +119,13 @@ export default function TeamPage() {
           </p>
         )}
       </div>
+
+      <AiCard
+        title="Road ahead — what do they need?"
+        ai={road}
+        cta="✨ Work it out"
+        note="Qualification maths during the groups, the knockout path after — computed from the live tables."
+      />
 
       <AiCard title={`${team.name} deep-dive`} ai={deepDive} cta="✨ Write deep-dive" />
 
