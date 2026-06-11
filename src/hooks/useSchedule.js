@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getFullSchedule } from "../lib/schedule.js";
+import { useResume } from "./useResume.js";
 
 export function useSchedule() {
   const [data, setData] = useState({ matches: [], fetchedAt: null, stale: false });
@@ -32,6 +33,10 @@ export function useSchedule() {
     }, 60000);
     return () => clearInterval(t);
   }, [anyLive, refresh]);
+
+  // Coming back to the foreground force-refetches today's chunk right away —
+  // the interval above was suspended the whole time the app was backgrounded.
+  useResume(() => refresh(true));
 
   return { ...data, loading, error, refresh };
 }

@@ -66,7 +66,9 @@ async function load(force) {
         return { ...cached, current: isCurrent };
       }
       try {
-        const matches = (await fetchScoreboard(yyyymmdd(chunk.from), yyyymmdd(chunk.to))).map(slim);
+        const wasLive = !!cached && cached.matches.some((m) => m.state === "in");
+        const bust = isCurrent && (wasLive || force);
+        const matches = (await fetchScoreboard(yyyymmdd(chunk.from), yyyymmdd(chunk.to), { bust })).map(slim);
         const entry = { fetchedAt: Date.now(), matches };
         cacheSet(chunk.key, entry);
         return { ...entry, current: isCurrent };

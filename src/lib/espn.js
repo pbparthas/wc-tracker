@@ -6,7 +6,10 @@ const ESPN = "https://site.api.espn.com/apis";
 const LEAGUE = "soccer/fifa.world";
 
 async function getJson(url) {
-  const res = await fetch(url);
+  // no-store: we poll the same URLs for live data, and the browser HTTP cache
+  // happily replays a cached body for the polling interval if ESPN sends a
+  // max-age — the app then "refreshes" into the same stale score.
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
@@ -40,8 +43,12 @@ export function normalizeEvent(ev) {
   };
 }
 
-export async function fetchScoreboard(fromYmd, toYmd) {
-  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/scoreboard?dates=${fromYmd}-${toYmd}`);
+export async function fetchScoreboard(fromYmd, toYmd, { bust = false } = {}) {
+  // bust: minute-stamped param so ESPN's CDN edge can't replay a stale body
+  // while we're polling a live match. Off for past/future fixtures so those
+  // stay cacheable offline.
+  const extra = bust ? `&_=${Math.floor(Date.now() / 60000)}` : "";
+  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/scoreboard?dates=${fromYmd}-${toYmd}${extra}`);
   return (data.events || []).map(normalizeEvent);
 }
 
