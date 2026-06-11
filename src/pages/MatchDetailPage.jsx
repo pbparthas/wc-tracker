@@ -10,6 +10,7 @@ import { useAiContent } from "../hooks/useAiContent.js";
 import { istParts } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
 import { WATCH_INDIA } from "../data/watch.js";
+import { stadiumFor } from "../data/stadiums.js";
 import { useWeather } from "../hooks/useWeather.js";
 import { previewPrompt, recapPrompt, h2hPrompt } from "../lib/prompts.js";
 
@@ -197,6 +198,30 @@ export default function MatchDetailPage() {
           Until then, browse each side's full tournament squad from the Teams tab.
         </div>
       ) : null}
+
+      {(() => {
+        const st = stadiumFor(match.city);
+        if (!st) return null;
+        const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${st.name}, ${st.city}`)}`;
+        return (
+          <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+            <div className="eyebrow" style={{ marginBottom: 4 }}>🏟 Stadium</div>
+            <div className="disp" style={{ fontSize: 18, fontWeight: 800 }}>{st.name.toUpperCase()}</div>
+            <div style={{ fontSize: 12, color: "var(--muted)", margin: "2px 0 8px" }}>
+              {st.city} · {st.country} · {st.capacity} seats · opened {st.opened}
+            </div>
+            <p style={{ fontSize: 13 }}>{st.facts}</p>
+            <a
+              href={maps}
+              target="_blank"
+              rel="noreferrer noopener"
+              style={{ fontSize: 12, display: "inline-block", marginTop: 8 }}
+            >
+              📍 View on map →
+            </a>
+          </div>
+        );
+      })()}
 
       {summary?.info && (summary.info.attendance || summary.info.referee) && (
         <div className="card" style={{ padding: "12px 14px", marginBottom: 20, fontSize: 13, color: "var(--muted)" }}>
