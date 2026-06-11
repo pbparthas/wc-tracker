@@ -255,3 +255,16 @@ td.tname, th.tname { text-align: left; }
 .lineup-col .pos { color: var(--muted); font-size: 11px; margin-right: 6px; display: inline-block; min-width: 22px; }
 .timeline li { list-style: none; display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; align-items: baseline; }
 .timeline .min { min-width: 34px; color: var(--saffron); font-variant-numeric: tabular-nums; font-weight: 700; }
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-row b:first-child { text-align: left; }
+.stat-row b:last-child { text-align: right; }
+.stat-row span { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; text-align: center; }

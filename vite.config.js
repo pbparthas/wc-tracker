@@ -7,7 +7,7 @@ import { VitePWA } from "vite-plugin-pwa";
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "connect-src 'self' https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://generativelanguage.googleapis.com",
+  "connect-src 'self' https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://generativelanguage.googleapis.com https://api.open-meteo.com",
   "img-src 'self' data: https://a.espncdn.com",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
@@ -65,6 +65,16 @@ export default defineConfig({
               cacheName: "espn-api",
               networkTimeoutSeconds: 8,
               expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 3 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: ({ url }) => url.hostname === "api.open-meteo.com",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "weather",
+              networkTimeoutSeconds: 6,
+              expiration: { maxEntries: 32, maxAgeSeconds: 60 * 60 * 3 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

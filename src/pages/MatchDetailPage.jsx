@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Flag from "../components/Flag.jsx";
 import StatusPill from "../components/StatusPill.jsx";
@@ -10,9 +10,33 @@ import { useAiContent } from "../hooks/useAiContent.js";
 import { istParts } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
 import { WATCH_INDIA } from "../data/watch.js";
-import { previewPrompt, recapPrompt } from "../lib/prompts.js";
+import { useWeather } from "../hooks/useWeather.js";
+import { previewPrompt, recapPrompt, h2hPrompt } from "../lib/prompts.js";
+
+const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 const ICONS = { goal: "⚽", og: "⚽(og)", pen: "⚽(p)", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
+
+function CommentaryCard({ items }) {
+  const [open, setOpen] = useState(false);
+  const shown = open ? items : items.slice(0, 3);
+  return (
+    <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+      <button className="ai-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="eyebrow">Commentary · {items.length} updates</span>
+        <span className="ai-chev" aria-hidden="true">{open ? "▾ latest only" : "▸ show all"}</span>
+      </button>
+      <ul className="timeline">
+        {shown.map((c, i) => (
+          <li key={c.seq || i}>
+            <span className="min">{c.minute}</span>
+            <span>{c.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function Lineup({ side }) {
   if (!side) return null;
@@ -56,6 +80,8 @@ export default function MatchDetailPage() {
 
   const preview = useAiContent("preview:" + id, () => previewPrompt(match, standings));
   const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
+  const h2h = useAiContent("h2h:" + id, () => h2hPrompt(match, matches), { ttlMs: WEEK });
+  const wx = useWeather(match?.id, match?.city, match?.kickoff, match?.state);
 
   if (!match) {
     return (
@@ -100,6 +126,12 @@ export default function MatchDetailPage() {
           {p ? `${p.day} · ${p.time}` : ""} <span style={{ color: "var(--saffron)", fontWeight: 600 }}>IST</span>
           {match.venue ? ` · ${match.venue}` : ""}
         </div>
+        {wx && (
+          <div style={{ textAlign: "center", marginTop: 6, fontSize: 12, color: "var(--muted)" }}>
+            {wx.emoji} {wx.label} · {wx.tempC}°C
+            {wx.rainPct != null ? ` · ${wx.rainPct}% rain` : ""} at kickoff
+          </div>
+        )}
         {upcoming && (
           <div style={{ textAlign: "center", marginTop: 12 }}>
             <button className="btn" onClick={() => downloadIcs(match)}>🔔 Add reminder to calendar</button>
@@ -116,6 +148,20 @@ export default function MatchDetailPage() {
 
       {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
       {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
+      {match.state !== "post" && <AiCard title="Head-to-head & form" ai={h2h} cta="✨ H2H & form" />}
+
+      {summary?.stats?.length > 0 && (
+        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+          <div className="eyebrow" style={{ marginBottom: 4 }}>Match stats</div>
+          {summary.stats.map((s) => (
+            <div key={s.label} className="stat-row">
+              <b>{s.home}</b>
+              <span>{s.label}</span>
+              <b>{s.away}</b>
+            </div>
+          ))}
+        </div>
+      )}
 
       {summary?.events?.length > 0 && (
         <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
@@ -133,6 +179,8 @@ export default function MatchDetailPage() {
           </ul>
         </div>
       )}
+
+      {summary?.commentary?.length > 0 && <CommentaryCard items={summary.commentary} />}
 
       {summary?.lineups && (summary.lineups.home || summary.lineups.away) ? (
         <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
