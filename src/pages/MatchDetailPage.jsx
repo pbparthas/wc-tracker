@@ -126,15 +126,21 @@ export default function MatchDetailPage() {
         </div>
       )}
 
-      {summary?.lineups && (summary.lineups.home || summary.lineups.away) && (
+      {summary?.lineups && (summary.lineups.home || summary.lineups.away) ? (
         <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-          <div className="eyebrow">Lineups</div>
+          <div className="eyebrow">Starting XI & bench</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Lineup side={summary.lineups.home} />
             <Lineup side={summary.lineups.away} />
           </div>
         </div>
-      )}
+      ) : upcoming && !sLoad ? (
+        <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
+          <div className="eyebrow" style={{ marginBottom: 4 }}>Starting XI</div>
+          Team sheets usually drop about an hour before kickoff — they'll appear here automatically.
+          Until then, browse each side's full tournament squad from the Teams tab.
+        </div>
+      ) : null}
 
       {summary?.info && (summary.info.attendance || summary.info.referee) && (
         <div className="card" style={{ padding: "12px 14px", marginBottom: 20, fontSize: 13, color: "var(--muted)" }}>

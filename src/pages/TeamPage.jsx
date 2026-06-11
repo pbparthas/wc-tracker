@@ -111,9 +111,13 @@ export default function TeamPage() {
 
       <AiCard title={`${team.name} deep-dive`} ai={deepDive} cta="✨ Write deep-dive" />
 
-      <h2 className="disp section-h">SQUAD</h2>
+      <h2 className="disp section-h">TOURNAMENT SQUAD</h2>
       <div className="card" style={{ padding: "6px 14px 12px" }}>
         <Squad {...roster} onPick={setPicked} />
+        <p style={{ fontSize: 11, color: "var(--muted)", margin: "10px 0 2px" }}>
+          The full squad registered for the tournament. The matchday starting XI is published on each
+          match page about an hour before kickoff.
+        </p>
       </div>
 
       {group && <GroupTable group={group} rows={standings[team.group]} />}
