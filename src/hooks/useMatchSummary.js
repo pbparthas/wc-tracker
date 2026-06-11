@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchSummary } from "../lib/espn.js";
 import { cacheGet, cacheSet } from "../lib/storage.js";
+import { useResume } from "./useResume.js";
 
 /* Finished matches cache forever; live matches poll every 60s. */
 export function useMatchSummary(eventId, state) {
@@ -33,6 +34,10 @@ export function useMatchSummary(eventId, state) {
     }, 60000);
     return () => clearInterval(t);
   }, [eventId, state, key, load]);
+
+  useResume(() => {
+    if (state === "in") load();
+  });
 
   return { summary, loading, error };
 }

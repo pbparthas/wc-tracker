@@ -6,7 +6,10 @@ const ESPN = "https://site.api.espn.com/apis";
 const LEAGUE = "soccer/fifa.world";
 
 async function getJson(url) {
-  const res = await fetch(url);
+  // no-store: we poll the same URLs for live data, and the browser HTTP cache
+  // happily replays a cached body for the polling interval if ESPN sends a
+  // max-age — the app then "refreshes" into the same stale score.
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
@@ -40,9 +43,42 @@ export function normalizeEvent(ev) {
   };
 }
 
-export async function fetchScoreboard(fromYmd, toYmd) {
-  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/scoreboard?dates=${fromYmd}-${toYmd}`);
+export async function fetchScoreboard(fromYmd, toYmd, { bust = false } = {}) {
+  // bust: minute-stamped param so ESPN's CDN edge can't replay a stale body
+  // while we're polling a live match. Off for past/future fixtures so those
+  // stay cacheable offline.
+  const extra = bust ? `&_=${Math.floor(Date.now() / 60000)}` : "";
+  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/scoreboard?dates=${fromYmd}-${toYmd}${extra}`);
   return (data.events || []).map(normalizeEvent);
+}
+
+/* ESPN's numeric team id: carried on live data when present, else recoverable
+   from the logo URL (https://a.espncdn.com/i/teamlogos/soccer/500/{id}.png). */
+export function espnTeamId(team) {
+  if (team?.espnId) return team.espnId;
+  const m = (team?.logo || "").match(/\/(\d+)\.png/);
+  return m ? m[1] : null;
+}
+
+/* National-squad roster. ESPN ships athletes either flat or grouped by position. */
+export async function fetchRoster(teamId) {
+  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/teams/${encodeURIComponent(teamId)}/roster`);
+  const raw = (data.athletes || []).flatMap((a) => (Array.isArray(a.items) ? a.items : [a]));
+  const players = raw
+    .map((p) => ({
+      id: String(p.id ?? ""),
+      name: p.fullName || p.displayName || "",
+      jersey: p.jersey || "",
+      pos: p.position?.abbreviation || p.position?.name || "",
+      posName: p.position?.displayName || p.position?.name || "",
+      age: p.age || null,
+      height: p.displayHeight || "",
+      weight: p.displayWeight || "",
+      headshot: p.headshot?.href || null,
+    }))
+    .filter((p) => p.name);
+  if (!players.length) throw new Error("squad unavailable");
+  return players;
 }
 
 const stat = (entry, name) => entry.stats?.find((s) => s.name === name)?.value ?? 0;

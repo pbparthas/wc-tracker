@@ -66,13 +66,14 @@ export const ALIASES = {
 
 export function resolveTeam(t) {
   const logo = t?.logo || t?.logos?.[0]?.href || null;
+  const espnId = t?.id ? String(t.id) : null;
   const ab = (t?.abbreviation || "").toUpperCase();
-  if (TEAMS[ab]) return { code: ab, logo, ...TEAMS[ab] };
+  if (TEAMS[ab]) return { code: ab, logo, espnId, ...TEAMS[ab] };
   const n = (t?.displayName || t?.name || "").toLowerCase().trim();
-  if (ALIASES[n]) return { code: ALIASES[n], logo, ...TEAMS[ALIASES[n]] };
+  if (ALIASES[n]) return { code: ALIASES[n], logo, espnId, ...TEAMS[ALIASES[n]] };
   const hit = Object.entries(TEAMS).find(([, v]) => v.name.toLowerCase() === n);
-  if (hit) return { code: hit[0], logo, ...hit[1] };
-  return { code: null, name: t?.displayName || t?.name || "TBD", flag: "🏳️", group: null, logo };
+  if (hit) return { code: hit[0], logo, espnId, ...hit[1] };
+  return { code: null, name: t?.displayName || t?.name || "TBD", flag: "🏳️", group: null, logo, espnId };
 }
 
 export const GROUPS = "ABCDEFGHIJKL".split("").map((g) => ({

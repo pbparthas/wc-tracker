@@ -1,17 +1,65 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import MatchRow from "../components/MatchRow.jsx";
 import GroupTable from "../components/GroupTable.jsx";
 import AiCard from "../components/AiCard.jsx";
 import FavoriteStar from "../components/FavoriteStar.jsx";
+import PlayerSheet from "../components/PlayerSheet.jsx";
 import { TEAMS, GROUPS } from "../data/teams.js";
+import { espnTeamId } from "../lib/espn.js";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
+import { useRoster } from "../hooks/useRoster.js";
 import { useAiContent } from "../hooks/useAiContent.js";
 import { useFavorites } from "../hooks/useFavorites.js";
 import { teamPrompt } from "../lib/prompts.js";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
+
+/* ESPN position abbreviations start with G/D/M/F; anything else goes last. */
+const POS_BUCKETS = [
+  ["G", "Goalkeepers"],
+  ["D", "Defenders"],
+  ["M", "Midfielders"],
+  ["F", "Forwards"],
+  ["", "Squad"],
+];
+const bucketOf = (p) => {
+  const c = (p.pos || "")[0]?.toUpperCase();
+  return ["G", "D", "M", "F"].includes(c) ? c : "";
+};
+
+function Squad({ players, loading, error, onPick }) {
+  if (loading) return <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading squad…</p>;
+  if (error || !players) {
+    return (
+      <p style={{ color: "var(--muted)", fontSize: 13 }}>
+        Squad not available from the data feed yet — check back closer to kickoff.
+      </p>
+    );
+  }
+  return POS_BUCKETS.map(([b, label]) => {
+    const group = players.filter((p) => bucketOf(p) === b);
+    if (!group.length) return null;
+    return (
+      <div key={label} style={{ marginBottom: 6 }}>
+        <h4 className="eyebrow" style={{ margin: "10px 0 2px" }}>{label}</h4>
+        <ul className="squad">
+          {group.map((p) => (
+            <li key={p.id || p.name}>
+              <button className="squad-row" onClick={() => onPick(p)}>
+                <span className="jersey">{p.jersey || "–"}</span>
+                <span className="pname">{p.name}</span>
+                {p.age && <span style={{ color: "var(--muted)", fontSize: 12 }}>{p.age} yrs</span>}
+                <span className="chev">›</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  });
+}
 
 export default function TeamPage() {
   const { code } = useParams();
@@ -19,8 +67,11 @@ export default function TeamPage() {
   const { matches } = useSchedule();
   const { standings } = useStandings();
   const { favs } = useFavorites();
+  const [picked, setPicked] = useState(null);
 
   const fixtures = matches.filter((m) => m.home.code === code || m.away.code === code);
+  const inFixture = fixtures.length ? (fixtures[0].home.code === code ? fixtures[0].home : fixtures[0].away) : null;
+  const roster = useRoster(code, espnTeamId(inFixture));
   const deepDive = useAiContent("team:" + code, () => teamPrompt(team, standings, fixtures), { ttlMs: WEEK });
 
   if (!team) {
@@ -60,6 +111,11 @@ export default function TeamPage() {
 
       <AiCard title={`${team.name} deep-dive`} ai={deepDive} cta="✨ Write deep-dive" />
 
+      <h2 className="disp section-h">SQUAD</h2>
+      <div className="card" style={{ padding: "6px 14px 12px" }}>
+        <Squad {...roster} onPick={setPicked} />
+      </div>
+
       {group && <GroupTable group={group} rows={standings[team.group]} />}
 
       {fixtures.length > 0 && (
@@ -71,6 +127,8 @@ export default function TeamPage() {
         </>
       )}
       <div style={{ height: 20 }} />
+
+      {picked && <PlayerSheet player={picked} team={team} onClose={() => setPicked(null)} />}
     </div>
   );
 }

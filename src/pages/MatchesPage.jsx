@@ -3,6 +3,7 @@ import Hero from "../components/Hero.jsx";
 import MatchRow from "../components/MatchRow.jsx";
 import DatePager from "../components/DatePager.jsx";
 import AiCard from "../components/AiCard.jsx";
+import InstallCard from "../components/InstallCard.jsx";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useFavorites } from "../hooks/useFavorites.js";
 import { useAiContent } from "../hooks/useAiContent.js";
@@ -80,6 +81,8 @@ export default function MatchesPage() {
             note="The live feed is down. Gemini can search the web for the latest results — approximate, but better than nothing."
           />
         )}
+
+        <InstallCard compact />
 
         {day === today && <AiCard title="Daily digest" ai={digest} cta="✨ Write today's digest" />}
 

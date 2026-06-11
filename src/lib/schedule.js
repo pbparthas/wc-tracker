@@ -24,9 +24,11 @@ function buildChunks() {
 
 const CHUNKS = buildChunks();
 
-const dehydrate = (t) => ({ code: t.code, name: t.name, flag: t.flag, logo: t.logo || null });
+const dehydrate = (t) => ({ code: t.code, name: t.name, flag: t.flag, logo: t.logo || null, espnId: t.espnId || null });
 const hydrate = (t) =>
-  t.code && TEAMS[t.code] ? { code: t.code, logo: t.logo, ...TEAMS[t.code] } : { group: null, ...t };
+  t.code && TEAMS[t.code]
+    ? { code: t.code, logo: t.logo, espnId: t.espnId || null, ...TEAMS[t.code] }
+    : { group: null, ...t };
 
 function slim(m) {
   return { ...m, home: dehydrate(m.home), away: dehydrate(m.away) };
@@ -66,7 +68,9 @@ async function load(force) {
         return { ...cached, current: isCurrent };
       }
       try {
-        const matches = (await fetchScoreboard(yyyymmdd(chunk.from), yyyymmdd(chunk.to))).map(slim);
+        const wasLive = !!cached && cached.matches.some((m) => m.state === "in");
+        const bust = isCurrent && (wasLive || force);
+        const matches = (await fetchScoreboard(yyyymmdd(chunk.from), yyyymmdd(chunk.to), { bust })).map(slim);
         const entry = { fetchedAt: Date.now(), matches };
         cacheSet(chunk.key, entry);
         return { ...entry, current: isCurrent };
