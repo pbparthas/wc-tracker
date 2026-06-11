@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0B1512"/>
+  <!-- pitch centre circle + halfway line, chalk -->
+  <line x1="0" y1="256" x2="512" y2="256" stroke="#EDF3EA" stroke-width="10" opacity="0.28"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#EDF3EA" stroke-width="10" opacity="0.28"/>
+  <circle cx="256" cy="256" r="10" fill="#EDF3EA" opacity="0.28"/>
+  <!-- GOLAZO mark: stylised "G!" in saffron -->
+  <text x="256" y="318" text-anchor="middle" font-family="Arial Narrow, Arial, sans-serif" font-weight="bold" font-size="240" fill="#FF9D3C">G!</text>
+</svg>

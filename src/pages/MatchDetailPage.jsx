@@ -1,0 +1,154 @@
+import React from "react";
+import { useParams, Link } from "react-router-dom";
+import Flag from "../components/Flag.jsx";
+import StatusPill from "../components/StatusPill.jsx";
+import AiCard from "../components/AiCard.jsx";
+import { useSchedule } from "../hooks/useSchedule.js";
+import { useStandings } from "../hooks/useStandings.js";
+import { useMatchSummary } from "../hooks/useMatchSummary.js";
+import { useAiContent } from "../hooks/useAiContent.js";
+import { istParts } from "../lib/time.js";
+import { downloadIcs } from "../lib/ics.js";
+import { previewPrompt, recapPrompt } from "../lib/prompts.js";
+
+const ICONS = { goal: "⚽", og: "⚽(og)", pen: "⚽(p)", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
+
+function Lineup({ side }) {
+  if (!side) return null;
+  return (
+    <div className="lineup-col">
+      <h4>
+        {side.team.name}
+        {side.formation ? ` · ${side.formation}` : ""}
+      </h4>
+      <ul>
+        {side.starters.map((p) => (
+          <li key={p.name + p.jersey}>
+            <span className="pos">{p.jersey || p.pos}</span>
+            {p.name}
+          </li>
+        ))}
+      </ul>
+      {side.subs.length > 0 && (
+        <>
+          <h4>Bench</h4>
+          <ul style={{ color: "var(--muted)" }}>
+            {side.subs.map((p) => (
+              <li key={p.name + p.jersey}>
+                <span className="pos">{p.jersey || p.pos}</span>
+                {p.name}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function MatchDetailPage() {
+  const { id } = useParams();
+  const { matches, loading } = useSchedule();
+  const { standings } = useStandings();
+  const match = matches.find((m) => m.id === id);
+  const { summary, loading: sLoad } = useMatchSummary(id, match?.state);
+
+  const preview = useAiContent("preview:" + id, () => previewPrompt(match, standings));
+  const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
+
+  if (!match) {
+    return (
+      <div className="wrap" style={{ paddingTop: 20 }}>
+        {loading ? (
+          <p className="pulse" style={{ color: "var(--muted)" }}>Loading match…</p>
+        ) : (
+          <p style={{ color: "var(--muted)" }}>
+            Match not found. <Link to="/">Back to matches</Link>
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  const p = istParts(match.kickoff);
+  const upcoming = match.state === "pre";
+
+  return (
+    <div className="wrap" style={{ paddingTop: 14 }}>
+      <Link to="/" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
+
+      <div className="card" style={{ padding: 16, margin: "10px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+          <span className="eyebrow">{match.stage}{match.city ? " · " + match.city : ""}</span>
+          <StatusPill status={match.status} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8, textAlign: "center" }}>
+          <div>
+            <Flag team={match.home} size={40} />
+            <div style={{ fontWeight: 700, marginTop: 6 }}>{match.home.name}</div>
+          </div>
+          <div className="disp" style={{ fontSize: upcoming ? 22 : 38, fontWeight: 800, color: upcoming ? "var(--saffron)" : "var(--chalk)" }}>
+            {upcoming ? (p ? p.time : "TBC") : `${match.hg ?? "–"} : ${match.ag ?? "–"}`}
+          </div>
+          <div>
+            <Flag team={match.away} size={40} />
+            <div style={{ fontWeight: 700, marginTop: 6 }}>{match.away.name}</div>
+          </div>
+        </div>
+        <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+          {p ? `${p.day} · ${p.time}` : ""} <span style={{ color: "var(--saffron)", fontWeight: 600 }}>IST</span>
+          {match.venue ? ` · ${match.venue}` : ""}
+        </div>
+        {upcoming && (
+          <div style={{ textAlign: "center", marginTop: 12 }}>
+            <button className="btn" onClick={() => downloadIcs(match)}>🔔 Add reminder to calendar</button>
+          </div>
+        )}
+      </div>
+
+      {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
+      {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
+
+      {summary?.events?.length > 0 && (
+        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+          <div className="eyebrow" style={{ marginBottom: 4 }}>Timeline</div>
+          <ul className="timeline">
+            {summary.events.map((e, i) => (
+              <li key={i}>
+                <span className="min">{e.minute}</span>
+                <span>
+                  {ICONS[e.kind] || "•"} {e.player || e.text}
+                  {e.team ? <span style={{ color: "var(--muted)" }}> · {e.team.name}</span> : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {summary?.lineups && (summary.lineups.home || summary.lineups.away) && (
+        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+          <div className="eyebrow">Lineups</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Lineup side={summary.lineups.home} />
+            <Lineup side={summary.lineups.away} />
+          </div>
+        </div>
+      )}
+
+      {summary?.info && (summary.info.attendance || summary.info.referee) && (
+        <div className="card" style={{ padding: "12px 14px", marginBottom: 20, fontSize: 13, color: "var(--muted)" }}>
+          {summary.info.attendance ? <div>Attendance: {Number(summary.info.attendance).toLocaleString("en-IN")}</div> : null}
+          {summary.info.referee ? <div>Referee: {summary.info.referee}</div> : null}
+        </div>
+      )}
+
+      {sLoad && !summary && (
+        <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading match details…</p>
+      )}
+      {!sLoad && !summary?.events?.length && !summary?.lineups && !upcoming && (
+        <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Detailed match data isn't available for this fixture yet.</p>
+      )}
+    </div>
+  );
+}
