@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 /* Renders ✨ AI content: never auto-generates, nudges to Settings without a key,
@@ -25,12 +25,26 @@ export function AiText({ text }) {
 
 export default function AiCard({ title, ai, cta = "✨ Generate", note }) {
   const { text, generatedAt, loading, error, generate, keyReady } = ai;
+  // Previously generated text starts collapsed so long AI reads don't push the
+  // rest of the page down; text you just asked for opens because you want it.
+  const [open, setOpen] = useState(() => !text);
+  const runGenerate = () => {
+    setOpen(true);
+    generate();
+  };
   return (
     <div className="card ai-card">
       <div className="ai-head">
-        <span className="eyebrow">✨ {title}</span>
+        {text ? (
+          <button className="ai-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+            <span className="eyebrow">✨ {title}</span>
+            <span className="ai-chev" aria-hidden="true">{open ? "▾ hide" : "▸ read"}</span>
+          </button>
+        ) : (
+          <span className="eyebrow">✨ {title}</span>
+        )}
         {!text && keyReady && (
-          <button className="btn accent" onClick={generate} disabled={loading}>
+          <button className="btn accent" onClick={runGenerate} disabled={loading}>
             {loading ? "Writing…" : cta}
           </button>
         )}
@@ -47,14 +61,14 @@ export default function AiCard({ title, ai, cta = "✨ Generate", note }) {
       {loading && !text && (
         <p className="pulse" style={{ fontSize: 13, color: "var(--muted)" }}>Gemini is writing…</p>
       )}
-      {text && <AiText text={text} />}
+      {text && open && <AiText text={text} />}
       {error && <p className="ai-err">{error.message || String(error)}</p>}
-      {text && (
+      {text && open && (
         <div className="ai-foot">
           <span>
             AI-generated{generatedAt ? ` · ${generatedAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" })} IST` : ""} · may contain mistakes
           </span>
-          <button className="btn ghost" style={{ padding: "4px 10px", minHeight: 30 }} onClick={generate} disabled={loading}>
+          <button className="btn ghost" style={{ padding: "4px 10px", minHeight: 30 }} onClick={runGenerate} disabled={loading}>
             {loading ? "Writing…" : "↻ Redo"}
           </button>
         </div>

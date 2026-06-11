@@ -9,6 +9,7 @@ import { useMatchSummary } from "../hooks/useMatchSummary.js";
 import { useAiContent } from "../hooks/useAiContent.js";
 import { istParts } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
+import { WATCH_INDIA } from "../data/watch.js";
 import { previewPrompt, recapPrompt } from "../lib/prompts.js";
 
 const ICONS = { goal: "⚽", og: "⚽(og)", pen: "⚽(p)", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
@@ -105,6 +106,13 @@ export default function MatchDetailPage() {
           </div>
         )}
       </div>
+
+      {match.state !== "post" && (
+        <div className="card" style={{ padding: "10px 14px", marginBottom: 10, fontSize: 13 }}>
+          📺 <b>Watch in India:</b> {WATCH_INDIA.streaming} (streaming) · {WATCH_INDIA.tv} (TV)
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{WATCH_INDIA.note}</div>
+        </div>
+      )}
 
       {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
       {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}

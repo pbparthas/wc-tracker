@@ -12,12 +12,15 @@ import "./styles/global.css";
 
 import App from "./App.jsx";
 import MatchesPage from "./pages/MatchesPage.jsx";
-import MatchDetailPage from "./pages/MatchDetailPage.jsx";
-import GroupsPage from "./pages/GroupsPage.jsx";
-import KnockoutPage from "./pages/KnockoutPage.jsx";
-import TeamsPage from "./pages/TeamsPage.jsx";
-import TeamPage from "./pages/TeamPage.jsx";
-import SettingsPage from "./pages/SettingsPage.jsx";
+
+/* The Matches tab is the app's front door and stays in the main bundle; every
+   other page loads on first visit (and is precached by the service worker). */
+const MatchDetailPage = React.lazy(() => import("./pages/MatchDetailPage.jsx"));
+const GroupsPage = React.lazy(() => import("./pages/GroupsPage.jsx"));
+const KnockoutPage = React.lazy(() => import("./pages/KnockoutPage.jsx"));
+const TeamsPage = React.lazy(() => import("./pages/TeamsPage.jsx"));
+const TeamPage = React.lazy(() => import("./pages/TeamPage.jsx"));
+const SettingsPage = React.lazy(() => import("./pages/SettingsPage.jsx"));
 
 const updateSW = registerSW({
   onNeedRefresh() {
