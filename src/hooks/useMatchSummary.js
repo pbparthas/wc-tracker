@@ -3,7 +3,9 @@ import { fetchSummary } from "../lib/espn.js";
 import { cacheGet, cacheSet } from "../lib/storage.js";
 import { useResume } from "./useResume.js";
 
-/* Finished matches cache forever; live matches poll every 60s. */
+/* Finished matches cache forever; live matches poll every 60s; upcoming
+   matches poll every 5min so the confirmed starting XI (published roughly an
+   hour before kickoff) appears without a reload. */
 export function useMatchSummary(eventId, state) {
   const key = "sum:" + eventId;
   const [summary, setSummary] = useState(() => (eventId ? cacheGet(key) : null));
@@ -28,15 +30,15 @@ export function useMatchSummary(eventId, state) {
   useEffect(() => {
     if (!eventId) return undefined;
     if (!(state === "post" && cacheGet(key))) load();
-    if (state !== "in") return undefined;
+    if (state !== "in" && state !== "pre") return undefined;
     const t = setInterval(() => {
       if (!document.hidden) load();
-    }, 60000);
+    }, state === "in" ? 60000 : 5 * 60 * 1000);
     return () => clearInterval(t);
   }, [eventId, state, key, load]);
 
   useResume(() => {
-    if (state === "in") load();
+    if (state === "in" || state === "pre") load();
   });
 
   return { summary, loading, error };
