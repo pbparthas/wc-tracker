@@ -183,6 +183,52 @@ td.tname, th.tname { text-align: left; }
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 
+/* Squad list */
+.squad { list-style: none; }
+.squad-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  color: var(--chalk);
+  padding: 10px 2px;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  min-height: 44px;
+}
+.squad-row:focus-visible { outline: 2px solid var(--saffron); outline-offset: -2px; }
+.squad-row .jersey { min-width: 28px; color: var(--saffron); font-variant-numeric: tabular-nums; font-weight: 700; }
+.squad-row .pname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.squad-row .chev { color: var(--muted); font-size: 16px; }
+
+/* Player bottom sheet */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet {
+  width: 100%;
+  max-width: 680px;
+  max-height: 80dvh;
+  overflow-y: auto;
+  border-radius: 18px 18px 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+}
+.fact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.fact-grid > div { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center; }
+.fact-grid span { display: block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.fact-grid b { font-size: 14px; }
+
 /* Misc */
 .team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .iconbtn { background: none; border: 1px solid var(--line); border-radius: 8px; color: var(--chalk); padding: 8px 10px; font-size: 16px; cursor: pointer; min-height: 40px; }

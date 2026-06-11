@@ -7,6 +7,7 @@ import {
 import { clearPrefix } from "../lib/storage.js";
 import { useFavorites } from "../hooks/useFavorites.js";
 import { GROUPS, TEAMS } from "../data/teams.js";
+import InstallCard from "../components/InstallCard.jsx";
 
 export default function SettingsPage() {
   const [keyInput, setKeyInput] = useState(() => getKey());
@@ -112,6 +113,8 @@ export default function SettingsPage() {
           It never touches this app's servers — there are none.
         </p>
       </div>
+
+      <InstallCard />
 
       <div className="card" style={{ padding: 16, marginBottom: 12 }}>
         <div className="eyebrow" style={{ marginBottom: 10 }}>Favourite teams</div>

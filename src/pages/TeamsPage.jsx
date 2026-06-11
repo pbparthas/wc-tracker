@@ -10,7 +10,7 @@ export default function TeamsPage() {
     <div className="wrap" style={{ paddingTop: 16 }}>
       <h2 className="disp" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>48 TEAMS, 48 STORIES</h2>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12 }}>
-        Tap a team for trivia, fixtures and an AI deep-dive. ★ marks your favourites.
+        Tap a team for trivia, the full squad, fixtures and an AI deep-dive. ★ marks your favourites.
       </p>
       {GROUPS.map((g) => (
         <div key={g.id} style={{ marginBottom: 12 }}>

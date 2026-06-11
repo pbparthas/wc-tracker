@@ -24,9 +24,11 @@ function buildChunks() {
 
 const CHUNKS = buildChunks();
 
-const dehydrate = (t) => ({ code: t.code, name: t.name, flag: t.flag, logo: t.logo || null });
+const dehydrate = (t) => ({ code: t.code, name: t.name, flag: t.flag, logo: t.logo || null, espnId: t.espnId || null });
 const hydrate = (t) =>
-  t.code && TEAMS[t.code] ? { code: t.code, logo: t.logo, ...TEAMS[t.code] } : { group: null, ...t };
+  t.code && TEAMS[t.code]
+    ? { code: t.code, logo: t.logo, espnId: t.espnId || null, ...TEAMS[t.code] }
+    : { group: null, ...t };
 
 function slim(m) {
   return { ...m, home: dehydrate(m.home), away: dehydrate(m.away) };

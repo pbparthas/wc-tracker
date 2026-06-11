@@ -82,6 +82,17 @@ export function teamPrompt(team, standings, fixtures) {
 
 /* Emergency fallback when ESPN is unreachable — uses Google Search grounding,
    so the answer is clearly labelled as approximate in the UI. */
+export function playerPrompt(player, team) {
+  return [
+    `Write a short profile of ${player.name}, in the ${team.name} squad at the FIFA World Cup 2026.`,
+    `Authoritative facts: position ${player.posName || player.pos || "unknown"}` +
+      `${player.jersey ? `, shirt #${player.jersey}` : ""}${player.age ? `, age ${player.age}` : ""}.`,
+    `Team context: ${team.trivia}`,
+    "Cover their club career, playing style, strengths and what to expect from them this tournament. " +
+      "If you are not certain about this specific player, stick to what is generally known and never invent statistics.",
+  ].join("\n");
+}
+
 export function espnDownPrompt() {
   return (
     "Using Google Search, find the latest FIFA World Cup 2026 scores: yesterday's results and today's fixtures " +

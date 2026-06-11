@@ -52,6 +52,35 @@ export async function fetchScoreboard(fromYmd, toYmd, { bust = false } = {}) {
   return (data.events || []).map(normalizeEvent);
 }
 
+/* ESPN's numeric team id: carried on live data when present, else recoverable
+   from the logo URL (https://a.espncdn.com/i/teamlogos/soccer/500/{id}.png). */
+export function espnTeamId(team) {
+  if (team?.espnId) return team.espnId;
+  const m = (team?.logo || "").match(/\/(\d+)\.png/);
+  return m ? m[1] : null;
+}
+
+/* National-squad roster. ESPN ships athletes either flat or grouped by position. */
+export async function fetchRoster(teamId) {
+  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/teams/${encodeURIComponent(teamId)}/roster`);
+  const raw = (data.athletes || []).flatMap((a) => (Array.isArray(a.items) ? a.items : [a]));
+  const players = raw
+    .map((p) => ({
+      id: String(p.id ?? ""),
+      name: p.fullName || p.displayName || "",
+      jersey: p.jersey || "",
+      pos: p.position?.abbreviation || p.position?.name || "",
+      posName: p.position?.displayName || p.position?.name || "",
+      age: p.age || null,
+      height: p.displayHeight || "",
+      weight: p.displayWeight || "",
+      headshot: p.headshot?.href || null,
+    }))
+    .filter((p) => p.name);
+  if (!players.length) throw new Error("squad unavailable");
+  return players;
+}
+
 const stat = (entry, name) => entry.stats?.find((s) => s.name === name)?.value ?? 0;
 
 export async function fetchStandings() {
