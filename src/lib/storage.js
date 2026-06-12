@@ -34,12 +34,17 @@ export function cacheRemove(key) {
   try { localStorage.removeItem(PREFIX + key); } catch { /* ignore */ }
 }
 
+/* User settings and UX flags survive a cache clear; only data does not. */
+const KEEP = new Set(
+  ["geminiKey", "geminiModel", "favs", "welcomed", "installDismissed"].map((k) => PREFIX + k)
+);
+
 export function clearPrefix(sub = "") {
   const full = PREFIX + sub;
   const doomed = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.startsWith(full) && k !== PREFIX + "geminiKey" && k !== PREFIX + "geminiModel" && k !== PREFIX + "favs") {
+    if (k && k.startsWith(full) && !KEEP.has(k)) {
       doomed.push(k);
     }
   }

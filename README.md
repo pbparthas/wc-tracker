@@ -1,14 +1,24 @@
 # Golazo ⚽ — FIFA World Cup 2026 Tracker
 
+**Live app: https://pbparthas.github.io/wc-tracker/** — open on your phone and
+"Add to Home Screen" (or use the in-app install button).
+
 An IST-first, mobile-only, installable PWA for following the 2026 World Cup
-(48 teams · 104 matches · 11 June – 19 July). Live scores, full schedule, groups,
-third-place race, knockout bracket, Golden Boot, calendar reminders — plus AI match
-previews, recaps and digests powered by **your own free Gemini key**.
+(48 teams · 104 matches · 11 June – 19 July). Live scores with match stats and
+minute-by-minute commentary, full schedule, groups and the best-thirds race,
+knockout bracket, tournament squads with player profiles, stadium guides,
+kickoff weather, Golden Boot, calendar reminders — plus AI previews, recaps,
+digests and qualification scenarios powered by **your own free Gemini key**.
 
 **Costs $0 to run**: static hosting on GitHub Pages, ESPN's free public feed for data,
-no server, no accounts, no tracking.
+no server, no accounts, no tracking. Each visitor's Gemini key lives only on their
+own device.
 
 Full product spec (features, design system, security model): [`docs/SPEC.md`](docs/SPEC.md)
+
+> **Unofficial fan project** — not affiliated with or endorsed by FIFA, ESPN,
+> Google or any team. Data comes from ESPN's public feed; all trademarks belong
+> to their owners.
 
 ## Develop
 
@@ -20,12 +30,18 @@ npm run preview    # serve the production build
 npm run icons      # regenerate PWA icons from public/icon.svg
 ```
 
-## Deploy (GitHub Pages, free)
+## Deploy your own copy (GitHub Pages, free)
 
-1. One-time: repo **Settings → Pages → Source = "GitHub Actions"**.
-2. Push (or merge) to `main` — `.github/workflows/deploy.yml` builds and deploys.
-3. App lives at **https://pbparthas.github.io/wc-tracker/** — open on your phone and
-   "Add to Home Screen".
+Anyone can run their own Golazo — there's no server to pay for:
+
+1. **Fork** this repo (keep it public; Pages is free on public repos).
+2. One-time: repo **Settings → Pages → Source = "GitHub Actions"**.
+3. If your fork has a different name, change `base` in `vite.config.js` and the
+   `og:url`/`og:image` URLs in `index.html` to match.
+4. Push (or merge) to `main` — `.github/workflows/deploy.yml` lints, tests,
+   builds and deploys to `https://<your-username>.github.io/<repo-name>/`.
+
+Found a bug? [Open an issue](https://github.com/pbparthas/wc-tracker/issues).
 
 Recommended free repo settings: enable **Dependabot alerts** and **secret scanning**
 (Settings → Code security).
