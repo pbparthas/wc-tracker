@@ -10,12 +10,62 @@ import { useAiContent } from "../hooks/useAiContent.js";
 import { istDateKey, istParts, dateKeyRange, IST } from "../lib/time.js";
 import { TOURNAMENT } from "../data/phases.js";
 import { digestPrompt, espnDownPrompt } from "../lib/prompts.js";
+import { cacheGet, cacheSet } from "../lib/storage.js";
 
 const DATES = dateKeyRange(TOURNAMENT.start, TOURNAMENT.end);
 const clampToday = () => {
   const t = istDateKey();
   return t < TOURNAMENT.start ? TOURNAMENT.start : t > TOURNAMENT.end ? TOURNAMENT.end : t;
 };
+
+/* Every match involving a favourite team, across the whole tournament —
+   results, live and upcoming in one collapsible place. */
+function FavTracker({ favMatches }) {
+  const [open, setOpen] = useState(() => cacheGet("favPanel") ?? true);
+  const toggle = () =>
+    setOpen((o) => {
+      cacheSet("favPanel", !o);
+      return !o;
+    });
+  const live = favMatches.filter((m) => m.state === "in");
+  const next = favMatches.filter((m) => m.state === "pre");
+  const done = favMatches.filter((m) => m.state === "post").reverse();
+  return (
+    <div className="card" style={{ padding: "10px 14px", marginBottom: 10, borderLeft: "3px solid var(--saffron)" }}>
+      <button className="ai-toggle" onClick={toggle} aria-expanded={open}>
+        <span className="eyebrow" style={{ color: "var(--saffron)" }}>
+          ★ Your teams · {favMatches.length} match{favMatches.length === 1 ? "" : "es"}
+        </span>
+        <span className="ai-chev" aria-hidden="true">{open ? "▾ hide" : "▸ open"}</span>
+      </button>
+      {open && (
+        <div style={{ marginTop: 8 }}>
+          {live.length > 0 && (
+            <>
+              <div className="eyebrow" style={{ color: "var(--live)", margin: "4px 0 6px" }}>Live now</div>
+              {live.map((m) => <MatchRow key={m.id} m={m} fav />)}
+            </>
+          )}
+          {next.length > 0 && (
+            <>
+              <div className="eyebrow" style={{ margin: "4px 0 6px" }}>Next up</div>
+              {next.map((m) => <MatchRow key={m.id} m={m} fav />)}
+            </>
+          )}
+          {done.length > 0 && (
+            <>
+              <div className="eyebrow" style={{ margin: "4px 0 6px" }}>Results</div>
+              {done.map((m) => <MatchRow key={m.id} m={m} fav />)}
+            </>
+          )}
+          {favMatches.length === 0 && (
+            <p style={{ fontSize: 13, color: "var(--muted)" }}>No fixtures for your teams yet.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function MatchesPage() {
   const { matches, loading, error, refresh, fetchedAt, stale } = useSchedule();
@@ -29,6 +79,10 @@ export default function MatchesPage() {
   );
 
   const isFavMatch = (m) => favs.includes(m.home.code) || favs.includes(m.away.code);
+  const favAll = useMemo(
+    () => matches.filter((m) => favs.includes(m.home.code) || favs.includes(m.away.code)),
+    [matches, favs]
+  );
   const favMatches = dayMatches.filter(isFavMatch);
   const rest = dayMatches.filter((m) => !isFavMatch(m));
   const live = rest.filter((m) => m.state === "in");
@@ -81,6 +135,8 @@ export default function MatchesPage() {
             note="The live feed is down. Gemini can search the web for the latest results — approximate, but better than nothing."
           />
         )}
+
+        {favs.length > 0 && favAll.length > 0 && <FavTracker favMatches={favAll} />}
 
         <InstallCard compact />
 
