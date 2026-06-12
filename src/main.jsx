@@ -11,6 +11,7 @@ import "@fontsource/saira-condensed/800.css";
 import "./styles/global.css";
 
 import App from "./App.jsx";
+import HomePage from "./pages/HomePage.jsx";
 import MatchesPage from "./pages/MatchesPage.jsx";
 
 /* The Matches tab is the app's front door and stays in the main bundle; every
@@ -34,7 +35,8 @@ const router = createHashRouter([
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <MatchesPage /> },
+      { index: true, element: <HomePage /> },
+      { path: "matches", element: <MatchesPage /> },
       { path: "match/:id", element: <MatchDetailPage /> },
       { path: "groups", element: <GroupsPage /> },
       { path: "knockout", element: <KnockoutPage /> },

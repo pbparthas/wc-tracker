@@ -18,7 +18,7 @@ export default function YourTeamsPage() {
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
-      <Link to="/" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
+      <Link to="/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
       <h2 className="disp" style={{ fontSize: 20, fontWeight: 800, margin: "10px 0 4px", color: "var(--saffron)" }}>
         YOUR ★ TEAMS
       </h2>
