@@ -38,7 +38,7 @@ export default function App() {
       >
         <Outlet />
       </Suspense>
-      <BottomTabs />
+      {pathname !== "/" && <BottomTabs />}
       {updateFn && (
         <div className="toast" role="status">
           <span>New version available</span>
