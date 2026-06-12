@@ -21,11 +21,11 @@ export default function GroupsPage() {
           Couldn't fetch standings ({error}).
         </div>
       )}
-      <ThirdPlaceTable standings={standings} />
-      <TopScorers />
       {GROUPS.map((g) => (
         <GroupTable key={g.id} group={g} rows={standings[g.id]} />
       ))}
+      <ThirdPlaceTable standings={standings} />
+      <TopScorers />
       {fetchedAt ? (
         <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 20 }}>
           Updated {fetchedAt.toLocaleTimeString("en-IN", { timeZone: IST })} IST · dashed line marks the qualification edge
