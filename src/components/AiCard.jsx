@@ -17,7 +17,14 @@ export function AiText({ text }) {
   return (
     <div className="ai-body">
       {paras.map((p, i) => (
-        <p key={i}>{renderInline(p, "p" + i)}</p>
+        <p key={i}>
+          {p.split("\n").map((line, j, arr) => (
+            <React.Fragment key={j}>
+              {renderInline(line, `p${i}l${j}`)}
+              {j < arr.length - 1 && <br />}
+            </React.Fragment>
+          ))}
+        </p>
       ))}
     </div>
   );

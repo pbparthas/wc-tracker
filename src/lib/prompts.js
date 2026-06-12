@@ -163,13 +163,28 @@ export function playerPrompt(player, team) {
 
 /* League mode ------------------------------------------------------------- */
 
+const todayLabel = () =>
+  new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric" });
+
 export function transferDigestPrompt(leagueName) {
   return (
-    `Using Google Search, write today's ${leagueName} transfer-window digest for Indian fans. ` +
-    "Start with CONFIRMED deals from the last few days — player, clubs, fee where reported — only where completion " +
-    "is reported by reliable sources. Then a clearly separated final section titled exactly 'RUMOR MILL:' with the " +
-    "most credible current rumors, each labelled by how firm it looks (e.g. advanced talks / interest only). " +
-    "Never present a rumor as a completed deal."
+    `Today is ${todayLabel()}. Using Google Search, write today's ${leagueName} transfer-window digest. ` +
+    "Report ONLY what your search results support, preferring coverage from the last 48 hours, and include the " +
+    "reported date for each deal. Start with CONFIRMED deals — player, clubs, fee where reported — only where " +
+    "completion is reported by reliable outlets. Then a clearly separated final section titled exactly 'RUMOR MILL:' " +
+    "with the most credible current rumors, each labelled by firmness (advanced talks / interest only). " +
+    "Never present a rumor as a completed deal. If fresh coverage is thin, say so plainly — do not pad the digest " +
+    "from memory or use pre-2026 knowledge for anyone's current status."
+  );
+}
+
+/* Fallback when ESPN's transactions feed is unavailable. */
+export function confirmedMovesPrompt(leagueName) {
+  return (
+    `Today is ${todayLabel()}. Using Google Search, list the CONFIRMED ${leagueName} transfers of the current ` +
+    "2026 summer window so far — completed deals only, per reliable outlets. One deal per line, formatted as: " +
+    "**Player** — From club → To club (fee, reported date). Most recent first, up to 20 deals. " +
+    "No rumors, no commentary. If you cannot verify a deal in search results, leave it out."
   );
 }
 
