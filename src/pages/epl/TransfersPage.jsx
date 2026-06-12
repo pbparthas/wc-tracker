@@ -5,7 +5,7 @@ import { fetchTransactions } from "../../lib/espn.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
-import { transferDigestPrompt } from "../../lib/prompts.js";
+import { transferDigestPrompt, confirmedMovesPrompt } from "../../lib/prompts.js";
 import { istDateKey, IST } from "../../lib/time.js";
 
 const EPL = COMPETITIONS.epl;
@@ -57,10 +57,18 @@ export default function TransfersPage() {
   );
   const { favs } = useFavorites("epl");
   const [mine, setMine] = useState(false);
-  const digest = useAiContent("transferDigest:epl:" + istDateKey(), () => transferDigestPrompt(EPL.name), {
+  // v2: prompt hardened (date-anchored, freshness-strict) — new key so stale
+  // digests generated under the old prompt don't linger.
+  const digest = useAiContent("transferDigest2:epl:" + istDateKey(), () => transferDigestPrompt(EPL.name), {
     ttlMs: 6 * HOUR,
     grounding: true,
   });
+  // When ESPN's feed is down, a search-grounded list stands in for it.
+  const movesAi = useAiContent("transferMoves:epl:" + istDateKey(), () => confirmedMovesPrompt(EPL.name), {
+    ttlMs: 6 * HOUR,
+    grounding: true,
+  });
+  const feedDown = !!error && !moves;
 
   const shown = (moves || []).filter(
     (m) => !mine || (m.toId && favs.includes(m.toId)) || (m.fromId && favs.includes(m.fromId))
@@ -93,10 +101,18 @@ export default function TransfersPage() {
         )}
       </div>
 
-      {error && !moves && (
-        <div className="card" style={{ padding: 12, marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
-          ESPN's transfer feed isn't answering right now — the AI digest above still has you covered.
-        </div>
+      {feedDown && (
+        <>
+          <div className="card" style={{ padding: 12, marginBottom: 10, fontSize: 12, color: "var(--muted)" }}>
+            ESPN's transfer feed isn't answering ({error}) — pulling the confirmed list via search instead.
+          </div>
+          <AiCard
+            title="Confirmed moves (via search)"
+            ai={movesAi}
+            cta="✨ Fetch confirmed moves"
+            note="One tap: Gemini searches for this window's completed deals — confirmed only, newest first."
+          />
+        </>
       )}
       {loading && !moves && <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading transfers…</p>}
 

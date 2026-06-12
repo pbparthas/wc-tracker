@@ -12,9 +12,10 @@ export const COMPETITIONS = {
       label: "Summer transfer window",
       closesIso: "2026-09-01T17:30:00Z", // expected ≈ 11 PM IST, 1 Sep — edit when confirmed
     },
-    /* Table zone markers (positions ≤ value). The fifth CL spot depends on
-       UEFA coefficients — footnoted as approximate in the UI. */
-    zones: { ucl: 4, uel: 5, conf: 6, releg: 17 },
+    /* Table zone markers (positions ≤ value). England earned five Champions
+       League places in 2025-26 via UEFA coefficients; cup winners can shift
+       the Europa/Conference spots — footnoted as approximate in the UI. */
+    zones: { ucl: 5, uel: 6, conf: 7, releg: 17 },
   },
 };
 

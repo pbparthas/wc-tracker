@@ -218,17 +218,36 @@ export async function fetchSummary(eventId) {
 
 /* Club league extras ------------------------------------------------------ */
 
-/* All clubs in a league (for the Clubs grid). */
+/* All clubs in a league (for the Clubs grid). Tries the teams endpoint under
+   both hosts/shapes; as a last resort derives the list from the standings,
+   which is known-good (it powers the table). */
 export async function fetchTeams(league) {
-  const data = await getJson(`${ESPN}/site/v2/sports/${league}/teams`);
-  const list = data.sports?.[0]?.leagues?.[0]?.teams || [];
-  const clubs = list
-    .map((t) => ({
-      id: String(t.team?.id ?? ""),
-      name: t.team?.displayName || t.team?.name || "",
-      abbr: (t.team?.abbreviation || "").toUpperCase(),
-      logo: t.team?.logos?.[0]?.href || null,
-    }))
+  const candidates = [
+    `${ESPN}/site/v2/sports/${league}/teams?limit=50`,
+    `https://site.web.api.espn.com/apis/site/v2/sports/${league}/teams?limit=50`,
+  ];
+  for (const url of candidates) {
+    try {
+      const data = await getJson(url);
+      const list = data.sports?.[0]?.leagues?.[0]?.teams || data.teams || data.items || [];
+      const clubs = list
+        .map((x) => {
+          const t = x.team || x;
+          return {
+            id: String(t?.id ?? ""),
+            name: t?.displayName || t?.name || "",
+            abbr: (t?.abbreviation || "").toUpperCase(),
+            logo: t?.logos?.[0]?.href || t?.logo || null,
+          };
+        })
+        .filter((c) => c.id && c.name)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      if (clubs.length) return clubs;
+    } catch { /* try next */ }
+  }
+  const { rows } = await fetchLeagueTable(league);
+  const clubs = rows
+    .map((r) => ({ id: r.team.espnId, name: r.team.name, abbr: "", logo: r.team.logo }))
     .filter((c) => c.id && c.name)
     .sort((a, b) => a.name.localeCompare(b.name));
   if (!clubs.length) throw new Error("clubs unavailable");
