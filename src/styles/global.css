@@ -11,6 +11,17 @@
   --pitch: #1e4633;
 }
 
+/* Per-competition identity: same Night Pitch chassis, different accent.
+   The Premier League wears its electric green on purple-tinted cards. */
+[data-comp="epl"] {
+  --saffron: #00e586;
+  --pitch: #2b1f42;
+  --card: #181229;
+  --line: rgba(230, 226, 240, 0.1);
+}
+
+.zdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: baseline; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; }
 body { background: var(--bg); overscroll-behavior-y: none; }

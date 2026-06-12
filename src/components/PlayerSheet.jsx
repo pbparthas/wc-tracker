@@ -7,10 +7,11 @@ const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 /* Bottom sheet with a player's roster details and an on-demand AI profile. */
 export default function PlayerSheet({ player, team, onClose }) {
+  // Search grounding so fresh transfers and current form make it into profiles.
   const profile = useAiContent(
     `player:${team.code}:${player.id || player.name}`,
     () => playerPrompt(player, team),
-    { ttlMs: WEEK }
+    { ttlMs: WEEK, grounding: true }
   );
 
   useEffect(() => {

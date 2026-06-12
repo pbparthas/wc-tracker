@@ -5,8 +5,9 @@ import { cacheGet, cacheSet } from "../lib/storage.js";
 const DAY = 24 * 60 * 60 * 1000;
 
 /* Squad list for a team. teamId is ESPN's numeric id (espnTeamId); until the
-   schedule has loaded it may be null, in which case the hook stays idle. */
-export function useRoster(code, teamId) {
+   schedule has loaded it may be null, in which case the hook stays idle.
+   `league` defaults to the World Cup inside fetchRoster. */
+export function useRoster(code, teamId, league) {
   const key = "roster:" + code;
   const [players, setPlayers] = useState(() => cacheGet(key));
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ export function useRoster(code, teamId) {
     if (cached || !teamId) return undefined;
     let on = true;
     setLoading(true);
-    fetchRoster(teamId)
+    fetchRoster(teamId, league)
       .then((p) => {
         cacheSet(key, p, DAY);
         if (on) setPlayers(p);
@@ -33,7 +34,7 @@ export function useRoster(code, teamId) {
     return () => {
       on = false;
     };
-  }, [key, teamId]);
+  }, [key, teamId, league]);
 
   return { players, loading, error };
 }

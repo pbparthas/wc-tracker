@@ -5,6 +5,7 @@ import GroupTable from "../components/GroupTable.jsx";
 import AiCard from "../components/AiCard.jsx";
 import FavoriteStar from "../components/FavoriteStar.jsx";
 import PlayerSheet from "../components/PlayerSheet.jsx";
+import SquadList from "../components/SquadList.jsx";
 import { TEAMS, GROUPS } from "../data/teams.js";
 import { espnTeamId } from "../lib/espn.js";
 import { computeThirdPlace } from "../lib/thirdPlace.js";
@@ -17,51 +18,6 @@ import { useFavorites } from "../hooks/useFavorites.js";
 import { teamPrompt, roadPrompt } from "../lib/prompts.js";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
-
-/* ESPN position abbreviations start with G/D/M/F; anything else goes last. */
-const POS_BUCKETS = [
-  ["G", "Goalkeepers"],
-  ["D", "Defenders"],
-  ["M", "Midfielders"],
-  ["F", "Forwards"],
-  ["", "Squad"],
-];
-const bucketOf = (p) => {
-  const c = (p.pos || "")[0]?.toUpperCase();
-  return ["G", "D", "M", "F"].includes(c) ? c : "";
-};
-
-function Squad({ players, loading, error, onPick }) {
-  if (loading) return <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading squad…</p>;
-  if (error || !players) {
-    return (
-      <p style={{ color: "var(--muted)", fontSize: 13 }}>
-        Squad not available from the data feed yet — check back closer to kickoff.
-      </p>
-    );
-  }
-  return POS_BUCKETS.map(([b, label]) => {
-    const group = players.filter((p) => bucketOf(p) === b);
-    if (!group.length) return null;
-    return (
-      <div key={label} style={{ marginBottom: 6 }}>
-        <h4 className="eyebrow" style={{ margin: "10px 0 2px" }}>{label}</h4>
-        <ul className="squad">
-          {group.map((p) => (
-            <li key={p.id || p.name}>
-              <button className="squad-row" onClick={() => onPick(p)}>
-                <span className="jersey">{p.jersey || "–"}</span>
-                <span className="pname">{p.name}</span>
-                {p.age && <span style={{ color: "var(--muted)", fontSize: 12 }}>{p.age} yrs</span>}
-                <span className="chev">›</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  });
-}
 
 export default function TeamPage() {
   const { code } = useParams();
@@ -131,7 +87,7 @@ export default function TeamPage() {
 
       <h2 className="disp section-h">TOURNAMENT SQUAD</h2>
       <div className="card" style={{ padding: "6px 14px 12px" }}>
-        <Squad {...roster} onPick={setPicked} />
+        <SquadList {...roster} onPick={setPicked} emptyNote="Squad not available from the data feed yet — check back closer to kickoff." />
         <p style={{ fontSize: 11, color: "var(--muted)", margin: "10px 0 2px" }}>
           The full squad registered for the tournament. The matchday starting XI is published on each
           match page about an hour before kickoff.
