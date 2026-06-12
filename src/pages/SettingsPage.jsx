@@ -16,7 +16,24 @@ export default function SettingsPage() {
   const [status, setStatus] = useState(null); // {ok, msg}
   const [testing, setTesting] = useState(false);
   const [cleared, setCleared] = useState(null);
+  const [shared, setShared] = useState(null);
   const { favs, toggle } = useFavorites();
+
+  const share = async () => {
+    const data = {
+      title: "Golazo · World Cup 2026",
+      text: "Live World Cup scores in IST — free, no ads, works offline.",
+      url: "https://pbparthas.github.io/wc-tracker/",
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(data);
+      } else {
+        await navigator.clipboard.writeText(data.url);
+        setShared("Link copied to clipboard!");
+      }
+    } catch { /* user cancelled the share sheet */ }
+  };
 
   const save = () => {
     setKey(keyInput, remember);
@@ -144,17 +161,34 @@ export default function SettingsPage() {
         </button>
         {cleared !== null && (
           <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
-            Cleared {cleared} cached entries (key and favourites kept).
+            Cleared {cleared} cached entries (key, favourites and preferences kept).
           </p>
         )}
       </div>
 
       <div className="card" style={{ padding: 16, marginBottom: 20, fontSize: 12, color: "var(--muted)" }}>
         <div className="eyebrow" style={{ marginBottom: 8 }}>About</div>
-        <p>
+        <p style={{ marginBottom: 10 }}>
           Golazo · FIFA World Cup 2026 tracker. Live data from ESPN's public feed; stories by Gemini with
           your own key. No accounts, no analytics, no tracking — everything stays on your device.
         </p>
+        <p style={{ marginBottom: 12 }}>
+          Unofficial fan project — not affiliated with or endorsed by FIFA, ESPN or any team.
+          All trademarks belong to their owners.
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn" onClick={share}>📤 Share Golazo</button>
+          <a
+            className="btn ghost"
+            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+            href="https://github.com/pbparthas/wc-tracker/issues"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            🐞 Report a problem
+          </a>
+        </div>
+        {shared && <p style={{ marginTop: 8, color: "var(--saffron)" }}>{shared}</p>}
       </div>
     </div>
   );
