@@ -19,6 +19,7 @@ const MatchDetailPage = React.lazy(() => import("./pages/MatchDetailPage.jsx"));
 const GroupsPage = React.lazy(() => import("./pages/GroupsPage.jsx"));
 const KnockoutPage = React.lazy(() => import("./pages/KnockoutPage.jsx"));
 const TeamsPage = React.lazy(() => import("./pages/TeamsPage.jsx"));
+const YourTeamsPage = React.lazy(() => import("./pages/YourTeamsPage.jsx"));
 const TeamPage = React.lazy(() => import("./pages/TeamPage.jsx"));
 const SettingsPage = React.lazy(() => import("./pages/SettingsPage.jsx"));
 
@@ -38,6 +39,7 @@ const router = createHashRouter([
       { path: "groups", element: <GroupsPage /> },
       { path: "knockout", element: <KnockoutPage /> },
       { path: "teams", element: <TeamsPage /> },
+      { path: "yourteams", element: <YourTeamsPage /> },
       { path: "team/:code", element: <TeamPage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
