@@ -9,7 +9,6 @@ import { useMatchSummary } from "../hooks/useMatchSummary.js";
 import { useAiContent } from "../hooks/useAiContent.js";
 import { istParts } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
-import { WATCH_INDIA } from "../data/watch.js";
 import { stadiumFor } from "../data/stadiums.js";
 import { useWeather } from "../hooks/useWeather.js";
 import { previewPrompt, recapPrompt, h2hPrompt } from "../lib/prompts.js";
@@ -91,7 +90,7 @@ export default function MatchDetailPage() {
           <p className="pulse" style={{ color: "var(--muted)" }}>Loading match…</p>
         ) : (
           <p style={{ color: "var(--muted)" }}>
-            Match not found. <Link to="/">Back to matches</Link>
+            Match not found. <Link to="/matches">Back to matches</Link>
           </p>
         )}
       </div>
@@ -103,7 +102,7 @@ export default function MatchDetailPage() {
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
-      <Link to="/" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
+      <Link to="/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
 
       <div className="card" style={{ padding: 16, margin: "10px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
@@ -139,13 +138,6 @@ export default function MatchDetailPage() {
           </div>
         )}
       </div>
-
-      {match.state !== "post" && (
-        <div className="card" style={{ padding: "10px 14px", marginBottom: 10, fontSize: 13 }}>
-          📺 <b>Watch in India:</b> {WATCH_INDIA.streaming} (streaming) · {WATCH_INDIA.tv} (TV)
-          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{WATCH_INDIA.note}</div>
-        </div>
-      )}
 
       {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
       {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
