@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Hero from "../components/Hero.jsx";
 import MatchRow from "../components/MatchRow.jsx";
 import DatePager from "../components/DatePager.jsx";
@@ -10,7 +11,6 @@ import { useAiContent } from "../hooks/useAiContent.js";
 import { istDateKey, istParts, dateKeyRange, IST } from "../lib/time.js";
 import { TOURNAMENT } from "../data/phases.js";
 import { digestPrompt, espnDownPrompt } from "../lib/prompts.js";
-import { cacheGet, cacheSet } from "../lib/storage.js";
 
 const DATES = dateKeyRange(TOURNAMENT.start, TOURNAMENT.end);
 const clampToday = () => {
@@ -18,56 +18,8 @@ const clampToday = () => {
   return t < TOURNAMENT.start ? TOURNAMENT.start : t > TOURNAMENT.end ? TOURNAMENT.end : t;
 };
 
-/* Every match involving a favourite team, across the whole tournament —
-   results, live and upcoming in one collapsible place. */
-function FavTracker({ favMatches }) {
-  const [open, setOpen] = useState(() => cacheGet("favPanel") ?? true);
-  const toggle = () =>
-    setOpen((o) => {
-      cacheSet("favPanel", !o);
-      return !o;
-    });
-  const live = favMatches.filter((m) => m.state === "in");
-  const next = favMatches.filter((m) => m.state === "pre");
-  const done = favMatches.filter((m) => m.state === "post").reverse();
-  return (
-    <div className="card" style={{ padding: "10px 14px", marginBottom: 10, borderLeft: "3px solid var(--saffron)" }}>
-      <button className="ai-toggle" onClick={toggle} aria-expanded={open}>
-        <span className="eyebrow" style={{ color: "var(--saffron)" }}>
-          ★ Your teams · {favMatches.length} match{favMatches.length === 1 ? "" : "es"}
-        </span>
-        <span className="ai-chev" aria-hidden="true">{open ? "▾ hide" : "▸ open"}</span>
-      </button>
-      {open && (
-        <div style={{ marginTop: 8 }}>
-          {live.length > 0 && (
-            <>
-              <div className="eyebrow" style={{ color: "var(--live)", margin: "4px 0 6px" }}>Live now</div>
-              {live.map((m) => <MatchRow key={m.id} m={m} fav />)}
-            </>
-          )}
-          {next.length > 0 && (
-            <>
-              <div className="eyebrow" style={{ margin: "4px 0 6px" }}>Next up</div>
-              {next.map((m) => <MatchRow key={m.id} m={m} fav />)}
-            </>
-          )}
-          {done.length > 0 && (
-            <>
-              <div className="eyebrow" style={{ margin: "4px 0 6px" }}>Results</div>
-              {done.map((m) => <MatchRow key={m.id} m={m} fav />)}
-            </>
-          )}
-          {favMatches.length === 0 && (
-            <p style={{ fontSize: 13, color: "var(--muted)" }}>No fixtures for your teams yet.</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function MatchesPage() {
+  const navigate = useNavigate();
   const { matches, loading, error, refresh, fetchedAt, stale } = useSchedule();
   const { favs } = useFavorites();
   const [day, setDay] = useState(clampToday);
@@ -136,7 +88,15 @@ export default function MatchesPage() {
           />
         )}
 
-        {favs.length > 0 && favAll.length > 0 && <FavTracker favMatches={favAll} />}
+        {favs.length > 0 && favAll.length > 0 && (
+          <button className="btn fav-link" onClick={() => navigate("/yourteams")}>
+            <span>
+              ★ Your teams
+              {favAll.some((m) => m.state === "in") && <span className="pulse" style={{ color: "var(--live)", marginLeft: 8 }}>● LIVE</span>}
+            </span>
+            <span style={{ color: "var(--muted)", fontWeight: 500 }}>{favAll.length} matches →</span>
+          </button>
+        )}
 
         <InstallCard compact />
 
