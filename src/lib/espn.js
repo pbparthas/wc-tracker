@@ -1,6 +1,7 @@
 /* ESPN public JSON API — keyless, CORS-open, but UNOFFICIAL: every parser here
    is defensive, and a failed section degrades to "not available", never a crash. */
 import { resolveTeam } from "../data/teams.js";
+import { tableOrder } from "./thirdPlace.js";
 
 const ESPN = "https://site.api.espn.com/apis";
 const LEAGUE = "soccer/fifa.world";
@@ -89,11 +90,15 @@ export async function fetchStandings() {
   for (const child of data.children || []) {
     const m = (child.name || child.abbreviation || "").match(/Group\s+([A-L])/i);
     if (!m) continue;
-    out[m[1].toUpperCase()] = (child.standings?.entries || []).map((e) => ({
-      team: resolveTeam(e.team),
-      p: stat(e, "gamesPlayed"), w: stat(e, "wins"), d: stat(e, "ties"), l: stat(e, "losses"),
-      gf: stat(e, "pointsFor"), ga: stat(e, "pointsAgainst"), pts: stat(e, "points"),
-    }));
+    // ESPN returns entries in draw order (A1, A2, …), NOT ranked — sort here
+    // so tables, the third-place ranking and AI prompts all see real standings.
+    out[m[1].toUpperCase()] = (child.standings?.entries || [])
+      .map((e) => ({
+        team: resolveTeam(e.team),
+        p: stat(e, "gamesPlayed"), w: stat(e, "wins"), d: stat(e, "ties"), l: stat(e, "losses"),
+        gf: stat(e, "pointsFor"), ga: stat(e, "pointsAgainst"), pts: stat(e, "points"),
+      }))
+      .sort(tableOrder);
   }
   if (Object.keys(out).length === 0) throw new Error("no group tables yet");
   return out;

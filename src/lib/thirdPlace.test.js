@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeThirdPlace } from "./thirdPlace.js";
+import { computeThirdPlace, tableOrder } from "./thirdPlace.js";
 
 const row = (code, pts, gf, ga, w) => ({ team: { code, name: code }, p: 3, w, d: 0, l: 0, gf, ga, pts });
 
@@ -11,6 +11,27 @@ function standingsWithThirds(thirds) {
   });
   return out;
 }
+
+describe("tableOrder", () => {
+  it("sorts ESPN's draw-order rows into a real table (the SK-3pts-below-0pts bug)", () => {
+    // Group A after matchday 1, exactly as ESPN returned it: draw order.
+    const drawOrder = [
+      { team: { code: "MEX" }, p: 1, w: 1, d: 0, l: 0, gf: 2, ga: 0, pts: 3 },
+      { team: { code: "CZE" }, p: 1, w: 0, d: 0, l: 1, gf: 0, ga: 1, pts: 0 },
+      { team: { code: "KOR" }, p: 1, w: 1, d: 0, l: 0, gf: 1, ga: 0, pts: 3 },
+      { team: { code: "RSA" }, p: 1, w: 0, d: 0, l: 1, gf: 0, ga: 2, pts: 0 },
+    ];
+    const sorted = [...drawOrder].sort(tableOrder);
+    expect(sorted.map((r) => r.team.code)).toEqual(["MEX", "KOR", "CZE", "RSA"]);
+  });
+
+  it("breaks point ties by GD, then GF, then wins", () => {
+    const a = { pts: 4, gf: 5, ga: 3, w: 1 }; // GD +2
+    const b = { pts: 4, gf: 6, ga: 4, w: 1 }; // GD +2, more GF
+    const c = { pts: 4, gf: 4, ga: 1, w: 1 }; // GD +3
+    expect([a, b, c].sort(tableOrder)).toEqual([c, b, a]);
+  });
+});
 
 describe("computeThirdPlace", () => {
   it("ranks by points, then goal difference, then goals for, then wins", () => {
