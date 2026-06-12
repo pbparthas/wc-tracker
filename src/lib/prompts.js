@@ -166,9 +166,10 @@ export function playerPrompt(player, team) {
 const todayLabel = () =>
   new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric" });
 
-export function transferDigestPrompt(leagueName) {
+export function transferDigestPrompt(leagueName, clubNames = []) {
   return (
     `Today is ${todayLabel()}. Using Google Search, write today's ${leagueName} transfer-window digest. ` +
+    (clubNames.length ? `Give particular attention to any business involving: ${clubNames.join(", ")}. ` : "") +
     "Report ONLY what your search results support, preferring coverage from the last 48 hours, and include the " +
     "reported date for each deal. Start with CONFIRMED deals — player, clubs, fee where reported — only where " +
     "completion is reported by reliable outlets. Then a clearly separated final section titled exactly 'RUMOR MILL:' " +
@@ -179,11 +180,12 @@ export function transferDigestPrompt(leagueName) {
 }
 
 /* Fallback when ESPN's transactions feed is unavailable. */
-export function confirmedMovesPrompt(leagueName) {
+export function confirmedMovesPrompt(leagueName, clubNames = []) {
   return (
     `Today is ${todayLabel()}. Using Google Search, list the CONFIRMED ${leagueName} transfers of the current ` +
     "2026 summer window so far — completed deals only, per reliable outlets. One deal per line, formatted as: " +
     "**Player** — From club → To club (fee, reported date). Most recent first, up to 20 deals. " +
+    (clubNames.length ? `Be sure to include any completed deals involving: ${clubNames.join(", ")}. ` : "") +
     "No rumors, no commentary. If you cannot verify a deal in search results, leave it out."
   );
 }

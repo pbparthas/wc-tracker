@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AiCard from "../../components/AiCard.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchTransactions } from "../../lib/espn.js";
+import { fetchTransactions, fetchTeams } from "../../lib/espn.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
@@ -55,24 +55,34 @@ export default function TransfersPage() {
   const { data: moves, loading, error, refresh } = useCached("transfers:epl", 30 * 60 * 1000, () =>
     fetchTransactions(EPL.slug)
   );
+  const { data: clubs } = useCached("clubs:epl", 7 * 24 * HOUR, () => fetchTeams(EPL.slug));
   const { favs } = useFavorites("epl");
   const [mine, setMine] = useState(false);
+  // Starred clubs as names: the AI prompts cover them, and the feed filter
+  // matches by name as well as id.
+  const favNames = favs
+    .map((id) => (clubs || []).find((c) => c.id === id)?.name)
+    .filter(Boolean);
   // v2: prompt hardened (date-anchored, freshness-strict) — new key so stale
   // digests generated under the old prompt don't linger.
-  const digest = useAiContent("transferDigest2:epl:" + istDateKey(), () => transferDigestPrompt(EPL.name), {
-    ttlMs: 6 * HOUR,
-    grounding: true,
-  });
+  const digest = useAiContent(
+    "transferDigest2:epl:" + istDateKey(),
+    () => transferDigestPrompt(EPL.name, favNames),
+    { ttlMs: 6 * HOUR, grounding: true }
+  );
   // When ESPN's feed is down, a search-grounded list stands in for it.
-  const movesAi = useAiContent("transferMoves:epl:" + istDateKey(), () => confirmedMovesPrompt(EPL.name), {
-    ttlMs: 6 * HOUR,
-    grounding: true,
-  });
+  const movesAi = useAiContent(
+    "transferMoves:epl:" + istDateKey(),
+    () => confirmedMovesPrompt(EPL.name, favNames),
+    { ttlMs: 6 * HOUR, grounding: true }
+  );
   const feedDown = !!error && !moves;
 
-  const shown = (moves || []).filter(
-    (m) => !mine || (m.toId && favs.includes(m.toId)) || (m.fromId && favs.includes(m.fromId))
-  );
+  const isMine = (m) =>
+    (m.toId && favs.includes(m.toId)) ||
+    (m.fromId && favs.includes(m.fromId)) ||
+    favNames.some((n) => n === m.to || n === m.from);
+  const shown = (moves || []).filter((m) => !mine || isMine(m));
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
@@ -94,7 +104,7 @@ export default function TransfersPage() {
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "14px 0 8px" }}>
         <h2 className="disp" style={{ fontSize: 18, fontWeight: 800 }}>CONFIRMED MOVES</h2>
-        {favs.length > 0 && (
+        {favs.length > 0 && (moves?.length ?? 0) > 0 && (
           <button className={"iconbtn" + (mine ? " on" : "")} style={{ fontSize: 12, padding: "6px 10px" }} onClick={() => setMine((m) => !m)}>
             ★ My clubs
           </button>
