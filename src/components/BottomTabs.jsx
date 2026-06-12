@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 
 const TABS = [
+  ["/", "⌂ HOME"],
   ["/matches", "MATCHES"],
   ["/groups", "GROUPS"],
   ["/knockout", "KNOCKOUT"],
@@ -13,7 +14,7 @@ export default function BottomTabs() {
     <nav className="tabs" aria-label="Sections">
       <div className="tabs-inner">
         {TABS.map(([to, label]) => (
-          <NavLink key={to} to={to} className={({ isActive }) => "tab" + (isActive ? " on" : "")}>
+          <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => "tab" + (isActive ? " on" : "")}>
             {label}
           </NavLink>
         ))}
