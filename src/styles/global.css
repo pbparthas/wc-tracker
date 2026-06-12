@@ -86,13 +86,14 @@ a { color: var(--saffron); }
 .tabs-inner { display: flex; max-width: 680px; width: 100%; }
 .tab {
   flex: 1;
-  padding: 12px 4px 14px;
+  padding: 12px 2px 14px;
   text-align: center;
   background: none;
   border: none;
   color: var(--muted);
   font-family: "Saira Condensed", sans-serif;
-  font-size: 15px;
+  font-size: 14px;
+  white-space: nowrap;
   font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
