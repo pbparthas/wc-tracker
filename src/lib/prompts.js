@@ -149,13 +149,44 @@ export function roadPrompt(team, standings, third, fixtures, rounds) {
 
 export function playerPrompt(player, team) {
   return [
-    `Write a short profile of ${player.name}, in the ${team.name} squad at the FIFA World Cup 2026.`,
+    `Write a short profile of ${player.name}, in the ${team.name} squad.`,
     `Authoritative facts: position ${player.posName || player.pos || "unknown"}` +
       `${player.jersey ? `, shirt #${player.jersey}` : ""}${player.age ? `, age ${player.age}` : ""}.`,
-    `Team context: ${team.trivia}`,
-    "Cover their club career, playing style, strengths and what to expect from them this tournament. " +
+    team.trivia ? `Team context: ${team.trivia}` : "",
+    "Cover their club career, playing style, strengths and what to expect from them next. " +
+      "If they have completed a confirmed transfer in the current window, mention it. " +
       "If you are not certain about this specific player, stick to what is generally known and never invent statistics.",
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/* League mode ------------------------------------------------------------- */
+
+export function transferDigestPrompt(leagueName) {
+  return (
+    `Using Google Search, write today's ${leagueName} transfer-window digest for Indian fans. ` +
+    "Start with CONFIRMED deals from the last few days — player, clubs, fee where reported — only where completion " +
+    "is reported by reliable sources. Then a clearly separated final section titled exactly 'RUMOR MILL:' with the " +
+    "most credible current rumors, each labelled by how firm it looks (e.g. advanced talks / interest only). " +
+    "Never present a rumor as a completed deal."
+  );
+}
+
+export function clubPrompt(club, moves) {
+  const lines = [
+    `Using Google Search where helpful, write a current profile of ${club.name} for the 2026 summer transfer window.`,
+  ];
+  if (moves?.length) {
+    lines.push("Their confirmed moves this window (authoritative):");
+    for (const m of moves.slice(0, 12)) {
+      lines.push(`- ${m.player}: ${m.from || "free agent"} → ${m.to}${m.fee ? ` (${m.fee})` : ""}`);
+    }
+  }
+  lines.push(
+    "Cover how last season went, what the squad still needs, what this window's business means, and the outlook for 2026-27."
+  );
+  return lines.join("\n");
 }
 
 export function espnDownPrompt() {

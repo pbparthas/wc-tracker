@@ -34,9 +34,10 @@ export function cacheRemove(key) {
   try { localStorage.removeItem(PREFIX + key); } catch { /* ignore */ }
 }
 
-/* User settings and UX flags survive a cache clear; only data does not. */
+/* User settings and UX flags survive a cache clear; only data does not.
+   "favs" covers per-competition lists too (wc26:favs:epl, ...). */
 const KEEP = new Set(
-  ["geminiKey", "geminiModel", "favs", "welcomed", "installDismissed"].map((k) => PREFIX + k)
+  ["geminiKey", "geminiModel", "welcomed", "installDismissed"].map((k) => PREFIX + k)
 );
 
 export function clearPrefix(sub = "") {
@@ -44,7 +45,7 @@ export function clearPrefix(sub = "") {
   const doomed = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.startsWith(full) && !KEEP.has(k)) {
+    if (k && k.startsWith(full) && !KEEP.has(k) && !k.startsWith(PREFIX + "favs")) {
       doomed.push(k);
     }
   }

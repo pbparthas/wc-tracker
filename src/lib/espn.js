@@ -4,7 +4,7 @@ import { resolveTeam } from "../data/teams.js";
 import { tableOrder } from "./thirdPlace.js";
 
 const ESPN = "https://site.api.espn.com/apis";
-const LEAGUE = "soccer/fifa.world";
+const LEAGUE = "soccer/fifa.world"; // default: the World Cup; pass `league` for clubs
 
 async function getJson(url) {
   // no-store: we poll the same URLs for live data, and the browser HTTP cache
@@ -62,8 +62,8 @@ export function espnTeamId(team) {
 }
 
 /* National-squad roster. ESPN ships athletes either flat or grouped by position. */
-export async function fetchRoster(teamId) {
-  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/teams/${encodeURIComponent(teamId)}/roster`);
+export async function fetchRoster(teamId, league = LEAGUE) {
+  const data = await getJson(`${ESPN}/site/v2/sports/${league}/teams/${encodeURIComponent(teamId)}/roster`);
   const raw = (data.athletes || []).flatMap((a) => (Array.isArray(a.items) ? a.items : [a]));
   const players = raw
     .map((p) => ({
@@ -214,6 +214,82 @@ export async function fetchSummary(eventId) {
   } catch { /* info unavailable */ }
 
   return out;
+}
+
+/* Club league extras ------------------------------------------------------ */
+
+/* All clubs in a league (for the Clubs grid). */
+export async function fetchTeams(league) {
+  const data = await getJson(`${ESPN}/site/v2/sports/${league}/teams`);
+  const list = data.sports?.[0]?.leagues?.[0]?.teams || [];
+  const clubs = list
+    .map((t) => ({
+      id: String(t.team?.id ?? ""),
+      name: t.team?.displayName || t.team?.name || "",
+      abbr: (t.team?.abbreviation || "").toUpperCase(),
+      logo: t.team?.logos?.[0]?.href || null,
+    }))
+    .filter((c) => c.id && c.name)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (!clubs.length) throw new Error("clubs unavailable");
+  return clubs;
+}
+
+/* Flat league table (one division, no groups). */
+export async function fetchLeagueTable(league) {
+  const data = await getJson(`${ESPN}/v2/sports/${league}/standings`);
+  const entries = (data.children || []).flatMap((c) => c.standings?.entries || []);
+  const rows = entries
+    .map((e) => ({
+      team: { code: null, espnId: e.team?.id ? String(e.team.id) : null, name: e.team?.displayName || e.team?.name || "?", flag: "", logo: e.team?.logos?.[0]?.href || null },
+      p: stat(e, "gamesPlayed"), w: stat(e, "wins"), d: stat(e, "ties"), l: stat(e, "losses"),
+      gf: stat(e, "pointsFor"), ga: stat(e, "pointsAgainst"), pts: stat(e, "points"),
+    }))
+    .sort(tableOrder);
+  if (!rows.length) throw new Error("table unavailable");
+  return { rows, season: data.season?.displayName || data.season?.year || null };
+}
+
+/* Confirmed transfers. ESPN ships transactions under a couple of shapes/hosts;
+   parse tolerantly and report only rows with a player and a destination. */
+export function parseTransactions(data) {
+  const raw = data?.transactions || data?.items || (Array.isArray(data) ? data : []);
+  const team = (t) => t?.displayName || t?.name || t?.shortDisplayName || "";
+  const moves = raw
+    .filter(Boolean)
+    .map((x) => {
+      const f = x.from || x.fromTeam;
+      const t = x.to || x.toTeam;
+      return {
+        date: x.date || x.displayDate || "",
+        player: x.athlete?.displayName || x.athlete?.fullName || x.player?.displayName || "",
+        from: team(f),
+        to: team(t),
+        fromId: f?.id ? String(f.id) : null,
+        toId: t?.id ? String(t.id) : null,
+        fromLogo: f?.logos?.[0]?.href || null,
+        toLogo: t?.logos?.[0]?.href || null,
+        fee: x.displayAmount || (x.amount ? String(x.amount) : "") || "",
+        type: x.type?.text || x.type || "",
+      };
+    })
+    .filter((m) => m.player && m.to);
+  moves.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return moves;
+}
+
+export async function fetchTransactions(league) {
+  const candidates = [
+    `${ESPN}/site/v2/sports/${league}/transactions?limit=200`,
+    `https://site.web.api.espn.com/apis/site/v2/sports/${league}/transactions?limit=200`,
+  ];
+  for (const url of candidates) {
+    try {
+      const moves = parseTransactions(await getJson(url));
+      if (moves.length) return moves;
+    } catch { /* try next shape */ }
+  }
+  throw new Error("transfers unavailable from the feed");
 }
 
 /* Golden Boot. ESPN exposes leaders under a couple of shapes/hosts; try each and

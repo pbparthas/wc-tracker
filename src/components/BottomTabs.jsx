@@ -1,7 +1,8 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
+import { windowOpen } from "../data/competitions.js";
 
-const TABS = [
+const WC_TABS = [
   ["/", "⌂ HOME"],
   ["/matches", "MATCHES"],
   ["/groups", "GROUPS"],
@@ -9,12 +10,22 @@ const TABS = [
   ["/teams", "TEAMS"],
 ];
 
+/* Transfers lead while the window is open; matches take over for the season. */
+const eplTabs = () => {
+  const order = windowOpen("epl")
+    ? [["/epl", "TRANSFERS"], ["/epl/matches", "MATCHES"]]
+    : [["/epl/matches", "MATCHES"], ["/epl", "TRANSFERS"]];
+  return [["/", "⌂"], ...order, ["/epl/table", "TABLE"], ["/epl/clubs", "CLUBS"]];
+};
+
 export default function BottomTabs() {
+  const { pathname } = useLocation();
+  const tabs = pathname.startsWith("/epl") ? eplTabs() : WC_TABS;
   return (
     <nav className="tabs" aria-label="Sections">
       <div className="tabs-inner">
-        {TABS.map(([to, label]) => (
-          <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => "tab" + (isActive ? " on" : "")}>
+        {tabs.map(([to, label]) => (
+          <NavLink key={to} to={to} end={to === "/" || to === "/epl"} className={({ isActive }) => "tab" + (isActive ? " on" : "")}>
             {label}
           </NavLink>
         ))}

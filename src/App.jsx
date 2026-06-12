@@ -19,7 +19,7 @@ export default function App() {
   }, [pathname]);
 
   return (
-    <div className="app">
+    <div className="app" data-comp={pathname.startsWith("/epl") ? "epl" : "wc"}>
       <header className="hdr">
         <div className="hdr-inner">
           <Link to="/" className="hdr-title disp">

@@ -2,7 +2,6 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const LEAGUES = [
-  ["🏴󠁧󠁢󠁥󠁮󠁧󠁿", "Premier League"],
   ["🇪🇸", "La Liga"],
   ["🇮🇹", "Serie A"],
   ["🇩🇪", "Bundesliga"],
@@ -44,6 +43,29 @@ export default function HomePage() {
       </div>
 
       <div className="eyebrow" style={{ margin: "16px 0 8px" }}>Club football</div>
+
+      <div
+        className="card"
+        role="link"
+        tabIndex={0}
+        onClick={() => navigate("/epl")}
+        onKeyDown={(e) => e.key === "Enter" && navigate("/epl")}
+        style={{ padding: 16, marginBottom: 8, cursor: "pointer", background: "linear-gradient(180deg,#241a3d 0%,#181229 100%)" }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span className="eyebrow" style={{ color: "#bfb3d9" }}>England · 2026-27</span>
+          <span className="eyebrow" style={{ color: "#00e586" }}>
+            <span className="pulse">●</span> Window open
+          </span>
+        </div>
+        <div className="disp" style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 2px" }}>
+          🏴󠁧󠁢󠁥󠁮󠁧󠁿 PREMIER LEAGUE
+        </div>
+        <div style={{ fontSize: 13, color: "var(--muted)" }}>
+          Transfer window live · squads · clubs · table — fixtures land mid-June
+        </div>
+      </div>
+
       {LEAGUES.map(([flag, name]) => (
         <div
           key={name}
