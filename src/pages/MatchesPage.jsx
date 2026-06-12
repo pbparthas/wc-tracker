@@ -73,7 +73,7 @@ export default function MatchesPage() {
           <div style={{ display: "flex", gap: 6 }}>
             {favs.length > 0 && favAll.length > 0 && (
               <button className="iconbtn on" style={{ fontSize: 12, padding: "6px 10px" }} onClick={() => navigate("/yourteams")}>
-                ★ Your teams
+                Your ★ teams
                 {anyFavLive && <span className="pulse" style={{ color: "var(--live)", marginLeft: 6 }}>●</span>}
               </button>
             )}

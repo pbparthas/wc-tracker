@@ -20,7 +20,7 @@ export default function YourTeamsPage() {
     <div className="wrap" style={{ paddingTop: 14 }}>
       <Link to="/" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
       <h2 className="disp" style={{ fontSize: 20, fontWeight: 800, margin: "10px 0 4px", color: "var(--saffron)" }}>
-        ★ YOUR TEAMS
+        YOUR ★ TEAMS
       </h2>
 
       {favs.length === 0 ? (
