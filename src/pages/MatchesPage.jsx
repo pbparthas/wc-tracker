@@ -62,16 +62,31 @@ export default function MatchesPage() {
     grounding: true,
   });
   const espnDown = !!error && matches.length === 0;
+  const anyFavLive = favAll.some((m) => m.state === "in");
 
   return (
     <>
-      <Hero matches={todayMatches} />
+      <Hero matches={matches} />
       <div className="wrap" style={{ paddingTop: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8 }}>
           <span className="eyebrow">All times in IST 🇮🇳</span>
-          <button className="btn" onClick={() => refresh(true)} disabled={loading}>
-            {loading ? "Fetching…" : "↻ Refresh"}
-          </button>
+          <div style={{ display: "flex", gap: 6 }}>
+            {favs.length > 0 && favAll.length > 0 && (
+              <button className="iconbtn on" style={{ fontSize: 12, padding: "6px 10px" }} onClick={() => navigate("/yourteams")}>
+                ★ Your teams
+                {anyFavLive && <span className="pulse" style={{ color: "var(--live)", marginLeft: 6 }}>●</span>}
+              </button>
+            )}
+            <button
+              className="iconbtn"
+              style={{ fontSize: 14, padding: "6px 12px" }}
+              onClick={() => refresh(true)}
+              disabled={loading}
+              aria-label="Refresh scores"
+            >
+              {loading ? "…" : "↻"}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -90,16 +105,6 @@ export default function MatchesPage() {
         )}
 
         <WelcomeCard />
-
-        {favs.length > 0 && favAll.length > 0 && (
-          <button className="btn fav-link" onClick={() => navigate("/yourteams")}>
-            <span>
-              ★ Your teams
-              {favAll.some((m) => m.state === "in") && <span className="pulse" style={{ color: "var(--live)", marginLeft: 8 }}>● LIVE</span>}
-            </span>
-            <span style={{ color: "var(--muted)", fontWeight: 500 }}>{favAll.length} matches →</span>
-          </button>
-        )}
 
         <InstallCard compact />
 

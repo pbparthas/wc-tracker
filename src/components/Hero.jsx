@@ -14,7 +14,15 @@ export default function Hero({ matches }) {
   const next = matches
     .filter((m) => m.state === "pre" && new Date(m.kickoff) > new Date())
     .sort((x, y) => new Date(x.kickoff) - new Date(y.kickoff))[0];
-  const m = live || next;
+  // Between days (or after the last whistle of the night): latest final score.
+  const last =
+    !live && !next
+      ? matches
+          .filter((m) => m.state === "post")
+          .sort((x, y) => new Date(x.kickoff) - new Date(y.kickoff))
+          .pop()
+      : null;
+  const m = live || next || last;
 
   let countdown = null;
   if (!live && next) {
@@ -47,7 +55,7 @@ export default function Hero({ matches }) {
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <Flag team={m.home} size={30} />
               <span className="disp" style={{ fontSize: 22, fontWeight: 800 }}>
-                {live ? `${m.hg ?? 0} : ${m.ag ?? 0}` : "vs"}
+                {live || last ? `${m.hg ?? 0} : ${m.ag ?? 0}` : "vs"}
               </span>
               <Flag team={m.away} size={30} />
               <span style={{ fontWeight: 600 }}>
@@ -58,7 +66,7 @@ export default function Hero({ matches }) {
               <div style={{ marginTop: 8 }}>
                 <StatusPill status={live.status} />
               </div>
-            ) : (
+            ) : next ? (
               <div style={{ marginTop: 10 }}>
                 <span className="disp" style={{ fontSize: 40, fontWeight: 800, color: "var(--saffron)", fontVariantNumeric: "tabular-nums" }}>
                   {countdown}
@@ -67,6 +75,10 @@ export default function Hero({ matches }) {
                   {istDayLabel(m.kickoff)} · {istParts(m.kickoff)?.time}{" "}
                   <span style={{ color: "var(--saffron)", fontWeight: 600 }}>IST</span> · {m.city}
                 </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
+                FULL-TIME · {istParts(m.kickoff)?.day} · {m.stage}
               </div>
             )}
           </div>

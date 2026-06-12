@@ -48,18 +48,7 @@ a { color: var(--saffron); }
 .btn.accent { background: var(--saffron); color: #1a1208; border-color: transparent; }
 
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
-.fav-link {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  background: var(--card);
-  border-left: 3px solid var(--saffron);
-  color: var(--saffron);
-  margin-bottom: 10px;
-}
-.card.fav { border-left: 3px solid var(--saffron); }
+.card.fav { border-color: rgba(255, 157, 60, 0.4); }
 .card.error { border-color: var(--live); }
 
 .pulse { animation: pulse 1.4s ease-in-out infinite; }
