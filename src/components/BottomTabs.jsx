@@ -25,7 +25,12 @@ export default function BottomTabs() {
     <nav className="tabs" aria-label="Sections">
       <div className="tabs-inner">
         {tabs.map(([to, label]) => (
-          <NavLink key={to} to={to} end={to === "/" || to === "/epl"} className={({ isActive }) => "tab" + (isActive ? " on" : "")}>
+          <NavLink
+            key={to}
+            to={to}
+            end={to === "/" || to === "/epl"}
+            className={({ isActive }) => "tab" + (to === "/" ? " home" : "") + (isActive ? " on" : "")}
+          >
             {label}
           </NavLink>
         ))}

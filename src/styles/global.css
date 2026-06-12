@@ -112,6 +112,7 @@ a { color: var(--saffron); }
   text-decoration: none;
 }
 .tab.on { color: var(--saffron); border-top-color: var(--saffron); }
+.tab.home { flex: 0 0 52px; font-size: 16px; }
 .tab:focus-visible { outline: 2px solid var(--saffron); outline-offset: -2px; }
 
 /* Tables */
@@ -258,7 +259,30 @@ td.tname, th.tname { text-align: left; }
 .fact-grid b { font-size: 14px; }
 
 /* Misc */
-.team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.team-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.team-grid > * { min-width: 0; }
+.club-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.club-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  min-height: 48px;
+  min-width: 0;
+  color: var(--chalk);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+}
+.club-row:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
+.club-row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.club-row img { flex: 0 0 auto; }
 .iconbtn { background: none; border: 1px solid var(--line); border-radius: 8px; color: var(--chalk); padding: 8px 10px; font-size: 16px; cursor: pointer; min-height: 40px; }
 .iconbtn.on { border-color: var(--saffron); color: var(--saffron); }
 .section-h { font-size: 18px; font-weight: 800; margin: 14px 0 8px; }

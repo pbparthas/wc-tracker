@@ -26,25 +26,23 @@ export default function ClubsPage() {
           <button className="btn ghost" style={{ marginLeft: 6 }} onClick={refresh}>Retry</button>
         </div>
       )}
-      <div className="team-grid">
+      <div className="club-grid">
         {(clubs || []).map((c) => (
           <button
             key={c.id}
             onClick={() => navigate(`/epl/club/${c.id}`)}
-            className="btn ghost"
-            style={{ padding: "10px 4px", textAlign: "center", position: "relative", borderColor: favs.includes(c.id) ? "var(--saffron)" : "var(--line)" }}
+            className="club-row"
+            style={{ borderColor: favs.includes(c.id) ? "var(--saffron)" : "var(--line)" }}
           >
-            {favs.includes(c.id) && (
-              <span style={{ position: "absolute", top: 2, right: 5, color: "var(--saffron)", fontSize: 11 }}>★</span>
-            )}
             {c.logo ? (
-              <img src={c.logo} alt="" width={28} height={28} loading="lazy" style={{ objectFit: "contain" }} />
+              <img src={c.logo} alt="" width={26} height={26} loading="lazy" style={{ objectFit: "contain" }} />
             ) : (
-              <div style={{ fontSize: 20 }}>⚽</div>
+              <span style={{ fontSize: 18 }}>⚽</span>
             )}
-            <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {c.name}
-            </div>
+            <span className="nm">{c.name}</span>
+            {favs.includes(c.id) && (
+              <span style={{ marginLeft: "auto", color: "var(--saffron)", fontSize: 12 }}>★</span>
+            )}
           </button>
         ))}
       </div>
