@@ -186,10 +186,10 @@ export async function fetchSummary(eventId, league = LEAGUE) {
         formation: r.formation || "",
         starters: roster
           .filter((p) => p.starter)
-          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "" })),
+          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: p.athlete?.headshot?.href || null })),
         subs: roster
           .filter((p) => !p.starter)
-          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "" })),
+          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: p.athlete?.headshot?.href || null, subMinute: p.subbedIn?.displayValue || "" })),
       };
     }
     if (sides.home || sides.away) out.lineups = sides;
