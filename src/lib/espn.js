@@ -186,10 +186,10 @@ export async function fetchSummary(eventId, league = LEAGUE) {
         formation: r.formation || "",
         starters: roster
           .filter((p) => p.starter)
-          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: p.athlete?.headshot?.href || null })),
+          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: p.athlete?.headshot?.href || (p.athlete?.id ? `https://a.espncdn.com/i/headshots/soccer/players/full/${p.athlete.id}.png` : null) })),
         subs: roster
           .filter((p) => !p.starter)
-          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: p.athlete?.headshot?.href || null, subMinute: p.subbedIn?.displayValue || "" })),
+          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: p.athlete?.headshot?.href || (p.athlete?.id ? `https://a.espncdn.com/i/headshots/soccer/players/full/${p.athlete.id}.png` : null), subMinute: p.subbedIn?.displayValue || "" })),
       };
     }
     if (sides.home || sides.away) out.lineups = sides;
@@ -242,6 +242,23 @@ export async function fetchSummary(eventId, league = LEAGUE) {
       referee: gi.officials?.[0]?.displayName || gi.officials?.[0]?.fullName || "",
     };
   } catch { /* info unavailable */ }
+
+  try {
+    const ps = {};
+    for (const team of data.boxscore?.players || []) {
+      for (const cat of team.statistics || []) {
+        const keys = cat.keys || [];
+        for (const a of cat.athletes || []) {
+          const name = a.athlete?.displayName;
+          if (!name) continue;
+          const s = {};
+          keys.forEach((k, i) => { s[k] = a.stats?.[i] ?? "0"; });
+          ps[name] = s;
+        }
+      }
+    }
+    if (Object.keys(ps).length) out.playerStats = ps;
+  } catch { /* player stats unavailable */ }
 
   return out;
 }

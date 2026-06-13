@@ -169,8 +169,8 @@ export default function MatchDetailPage() {
 
       {activeTab === "lineups" && summary?.lineups && (
         <>
-          <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} />
-          <BenchList home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} />
+          <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
+          <BenchList home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
         </>
       )}
 

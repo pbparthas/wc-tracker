@@ -56,16 +56,29 @@ export function EventSummary({ events, match }) {
 
 /* ── Player info overlay ──────────────────────────────────────────── */
 
-function PlayerInfo({ player, events, subMinute, onClose }) {
+function PlayerInfo({ player, events, subMinute, playerStats, onClose }) {
   const evs = events.filter((e) => e.kind !== "event");
+  const stats = playerStats?.[player.name] || {};
+  const statRows = [
+    ["Minutes", stats.minutesPlayed],
+    ["Goals", stats.goals],
+    ["Assists", stats.assists],
+    ["Shots", stats.totalShots || stats.shots],
+    ["On target", stats.shotsOnTarget],
+    ["Fouls", stats.foulsCommitted || stats.fouls],
+    ["Yellow cards", stats.yellowCards],
+    ["Red cards", stats.redCards],
+    ["Saves", stats.saves],
+  ].filter(([, v]) => v !== undefined && v !== null);
+
   return (
     <div className="card" style={{ padding: 14, marginTop: 10, marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           {player.headshot ? (
-            <img src={player.headshot} alt="" width={48} height={48} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+            <img src={player.headshot} alt="" width={52} height={52} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0, background: "#222" }} />
           ) : (
-            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--pitch)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--pitch)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
               {player.jersey || "?"}
             </div>
           )}
@@ -89,8 +102,19 @@ function PlayerInfo({ player, events, subMinute, onClose }) {
           ))}
         </div>
       )}
-      {evs.length === 0 && !subMinute && (
-        <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)" }}>No key events this match.</div>
+      {statRows.length > 0 && (
+        <div style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+          <div className="eyebrow" style={{ marginBottom: 4 }}>Match stats</div>
+          {statRows.map(([label, val]) => (
+            <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", borderTop: "1px solid var(--line)" }}>
+              <span style={{ color: "var(--muted)" }}>{label}</span>
+              <span style={{ fontWeight: 600 }}>{val}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {evs.length === 0 && statRows.length === 0 && !subMinute && (
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)" }}>No detailed stats available.</div>
       )}
     </div>
   );
@@ -165,7 +189,10 @@ function buildSubMap(side, events) {
   const teamSubs = events.filter((e) => e.kind === "sub" && isTeam(e, side.team));
   for (const e of teamSubs) {
     for (const s of side.starters) {
-      if (nameMatch(e.player, s.name)) subMap.set(s.name, e.minute);
+      if (subMap.has(s.name)) continue;
+      if (nameMatch(e.player, s.name)) { subMap.set(s.name, e.minute); continue; }
+      const lastName = s.name.split(" ").pop().toLowerCase();
+      if (e.text && e.text.toLowerCase().includes(lastName)) subMap.set(s.name, e.minute);
     }
   }
   return subMap;
@@ -173,7 +200,7 @@ function buildSubMap(side, events) {
 
 /* ── Full pitch: both teams on one continuous field ────────────────── */
 
-export function PitchView({ home, away, events }) {
+export function PitchView({ home, away, events, playerStats }) {
   const [imgErrors, setImgErrors] = useState(new Set());
   const [picked, setPicked] = useState(null);
 
@@ -225,7 +252,7 @@ export function PitchView({ home, away, events }) {
 
         {/* Away half */}
         {awayRows.length > 0 && (
-          <div style={{ padding: "10px 4px 6px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ padding: "14px 4px 10px", display: "flex", flexDirection: "column", gap: 18 }}>
             <div style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
               {away?.team?.name || "Away"} · {away?.formation || ""}
             </div>
@@ -235,7 +262,7 @@ export function PitchView({ home, away, events }) {
 
         {/* Home half */}
         {homeRows.length > 0 && (
-          <div style={{ padding: "6px 4px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ padding: "10px 4px 14px", display: "flex", flexDirection: "column", gap: 18 }}>
             {homeRows.map((row, ri) => <React.Fragment key={"h" + ri}>{renderRow(row, homeSubs)}</React.Fragment>)}
             <div style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
               {home?.team?.name || "Home"} · {home?.formation || ""}
@@ -249,6 +276,7 @@ export function PitchView({ home, away, events }) {
           player={picked}
           events={playerMatchEvents(picked, events)}
           subMinute={homeSubs.get(picked.name) || awaySubs.get(picked.name)}
+          playerStats={playerStats}
           onClose={() => setPicked(null)}
         />
       )}
@@ -258,7 +286,7 @@ export function PitchView({ home, away, events }) {
 
 /* ── Bench list ───────────────────────────────────────────────────── */
 
-export function BenchList({ home, away, events }) {
+export function BenchList({ home, away, events, playerStats }) {
   const [imgErrors, setImgErrors] = useState(new Set());
   const [picked, setPicked] = useState(null);
   const homeSubs = home?.subs || [];
@@ -317,6 +345,7 @@ export function BenchList({ home, away, events }) {
           player={picked}
           events={playerMatchEvents(picked, events)}
           subMinute={null}
+          playerStats={playerStats}
           onClose={() => setPicked(null)}
         />
       )}
