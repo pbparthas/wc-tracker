@@ -9,11 +9,12 @@ export default function MatchRow({ m, fav = false }) {
   const navigate = useNavigate();
   const p = istParts(m.kickoff);
   const upcoming = m.state === "pre";
+  const live = m.state === "in";
 
   return (
     <div
       className={"card" + (fav ? " fav" : "")}
-      style={{ padding: "12px 14px", marginBottom: 8, cursor: "pointer" }}
+      style={{ padding: "12px 14px", marginBottom: 8, cursor: "pointer", borderColor: live ? "var(--live)" : undefined }}
       onClick={() => m.id && navigate(`/match/${m.id}`)}
       role="link"
       tabIndex={0}
@@ -31,13 +32,13 @@ export default function MatchRow({ m, fav = false }) {
           </span>
         </div>
         <div
-          className="disp"
+          className={"disp" + (live ? " pulse" : "")}
           style={{
             fontSize: upcoming ? 16 : 26,
             fontWeight: 800,
             textAlign: "center",
             minWidth: 64,
-            color: upcoming ? "var(--saffron)" : "var(--chalk)",
+            color: upcoming ? "var(--saffron)" : live ? "var(--live)" : "var(--chalk)",
           }}
         >
           {upcoming ? (p ? p.time : "TBC") : `${m.hg ?? "–"} : ${m.ag ?? "–"}`}

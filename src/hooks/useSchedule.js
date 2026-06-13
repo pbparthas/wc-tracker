@@ -19,23 +19,26 @@ export function useSchedule() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    refresh(true);
   }, [refresh]);
 
   const anyLive = data.matches.some((m) => m.state === "in");
 
-  // While a match is live, re-evaluate every 60s (cache TTL drops to 60s for
-  // today's chunk, so this refetches only what changed). Paused when hidden.
-  useEffect(() => {
-    if (!anyLive) return undefined;
-    const t = setInterval(() => {
-      if (!document.hidden) refresh();
-    }, 60000);
-    return () => clearInterval(t);
-  }, [anyLive, refresh]);
+  // A match might have started but cache still says "pre" — detect this by
+  // checking if any kickoff is in the past but state hasn't flipped yet.
+  const kickoffSoon = data.matches.some(
+    (m) => m.state === "pre" && new Date(m.kickoff).getTime() - Date.now() < 5 * 60 * 1000
+  );
 
-  // Coming back to the foreground force-refetches today's chunk right away —
-  // the interval above was suspended the whole time the app was backgrounded.
+  useEffect(() => {
+    if (!anyLive && !kickoffSoon) return undefined;
+    const ms = anyLive ? 60000 : 120000;
+    const t = setInterval(() => {
+      if (!document.hidden) refresh(true);
+    }, ms);
+    return () => clearInterval(t);
+  }, [anyLive, kickoffSoon, refresh]);
+
   useResume(() => refresh(true));
 
   return { ...data, loading, error, refresh };

@@ -99,12 +99,13 @@ export default function MatchDetailPage() {
 
   const p = istParts(match.kickoff);
   const upcoming = match.state === "pre";
+  const live = match.state === "in";
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
       <Link to="/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
 
-      <div className="card" style={{ padding: 16, margin: "10px 0" }}>
+      <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: live ? "var(--live)" : undefined }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
           <span className="eyebrow">{match.stage}{match.city ? " · " + match.city : ""}</span>
           <StatusPill status={match.status} />
@@ -114,8 +115,26 @@ export default function MatchDetailPage() {
             <Flag team={match.home} size={40} />
             <div style={{ fontWeight: 700, marginTop: 6 }}>{match.home.name}</div>
           </div>
-          <div className="disp" style={{ fontSize: upcoming ? 22 : 38, fontWeight: 800, color: upcoming ? "var(--saffron)" : "var(--chalk)" }}>
-            {upcoming ? (p ? p.time : "TBC") : `${match.hg ?? "–"} : ${match.ag ?? "–"}`}
+          <div>
+            <div className={"disp" + (live ? " pulse" : "")} style={{
+              fontSize: live ? 48 : upcoming ? 22 : 38,
+              fontWeight: 800,
+              color: live ? "var(--live)" : upcoming ? "var(--saffron)" : "var(--chalk)",
+              lineHeight: 1.1,
+            }}>
+              {upcoming ? (p ? p.time : "TBC") : `${match.hg ?? "–"} : ${match.ag ?? "–"}`}
+            </div>
+            {live && (
+              <div className="disp" style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: "var(--live)",
+                marginTop: 4,
+                letterSpacing: "0.08em",
+              }}>
+                {match.status}
+              </div>
+            )}
           </div>
           <div>
             <Flag team={match.away} size={40} />
