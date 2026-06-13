@@ -18,7 +18,6 @@ const EPL = COMPETITIONS.epl;
 export default function EplMatchDetailPage() {
   const { id } = useParams();
   const [tab, setTab] = useState("overview");
-  const [lineupSide, setLineupSide] = useState("home");
   const { data: allMatches } = useCached("eplmatches", 10 * 60 * 1000, () => fetchLeagueMatches(EPL.slug));
 
   const [summary, setSummary] = useState(() => cacheGet("sum:epl:" + id));
@@ -84,7 +83,6 @@ export default function EplMatchDetailPage() {
     ...(!upcoming && summary?.stats?.length ? [{ id: "stats", label: "Stats" }] : []),
   ];
   const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
-  const activeSide = summary?.lineups?.[lineupSide] ? lineupSide : "home";
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
@@ -169,34 +167,8 @@ export default function EplMatchDetailPage() {
 
       {activeTab === "lineups" && summary?.lineups && (
         <>
-          <div className="match-tabs" style={{ marginBottom: 10 }}>
-            <button className={"match-tab" + (activeSide === "home" ? " on" : "")} onClick={() => setLineupSide("home")}>
-              {match.home.name} · {summary.lineups.home?.formation || ""}
-            </button>
-            <button className={"match-tab" + (activeSide === "away" ? " on" : "")} onClick={() => setLineupSide("away")}>
-              {match.away.name} · {summary.lineups.away?.formation || ""}
-            </button>
-          </div>
-
-          {summary.lineups[activeSide]?.formation ? (
-            <PitchView side={summary.lineups[activeSide]} />
-          ) : (
-            <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-              <div className="eyebrow" style={{ marginBottom: 8 }}>Starting XI</div>
-              <div className="lineup-col">
-                <ul>
-                  {(summary.lineups[activeSide]?.starters || []).map((pl) => (
-                    <li key={pl.name + pl.jersey}>
-                      <span className="pos">{pl.jersey || pl.pos}</span>
-                      {pl.name}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          <BenchList players={summary.lineups[activeSide]?.subs} />
+          <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} />
+          <BenchList home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} />
         </>
       )}
 
