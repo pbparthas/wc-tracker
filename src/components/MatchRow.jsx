@@ -5,7 +5,7 @@ import StatusPill from "./StatusPill.jsx";
 import { istParts, istDayLabel } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
 
-export default function MatchRow({ m, fav = false }) {
+export default function MatchRow({ m, fav = false, linkBase = "/match" }) {
   const navigate = useNavigate();
   const p = istParts(m.kickoff);
   const upcoming = m.state === "pre";
@@ -15,7 +15,7 @@ export default function MatchRow({ m, fav = false }) {
     <div
       className={"card" + (fav ? " fav" : "")}
       style={{ padding: "12px 14px", marginBottom: 8, cursor: "pointer", borderColor: live ? "var(--live)" : undefined }}
-      onClick={() => m.id && navigate(`/match/${m.id}`)}
+      onClick={() => m.id && navigate(`${linkBase}/${m.id}`)}
       role="link"
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && m.id && navigate(`/match/${m.id}`)}

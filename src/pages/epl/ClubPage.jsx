@@ -4,7 +4,7 @@ import AiCard from "../../components/AiCard.jsx";
 import SquadList from "../../components/SquadList.jsx";
 import PlayerSheet from "../../components/PlayerSheet.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchTeams, fetchTransactions } from "../../lib/espn.js";
+import { fetchTeams, fetchTransactions, fetchLeagueTable } from "../../lib/espn.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useRoster } from "../../hooks/useRoster.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
@@ -14,10 +14,33 @@ import { clubPrompt } from "../../lib/prompts.js";
 const EPL = COMPETITIONS.epl;
 const DAY = 24 * 60 * 60 * 1000;
 
+function PositionBadge({ pos }) {
+  let color = "var(--muted)";
+  let label = "";
+  if (pos <= EPL.zones.ucl) { color = "#2563eb"; label = "UCL"; }
+  else if (pos <= EPL.zones.uel) { color = "#f97316"; label = "UEL"; }
+  else if (pos <= EPL.zones.conf) { color = "#22c55e"; label = "UECL"; }
+  else if (pos > EPL.zones.releg) { color = "var(--live)"; label = "REL"; }
+  return (
+    <div style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      background: "var(--bg)", border: "1px solid var(--line)",
+      borderRadius: 10, padding: "6px 12px",
+    }}>
+      <span className="disp" style={{ fontSize: 22, fontWeight: 800, color }}>{pos}</span>
+      <div style={{ fontSize: 11, color: "var(--muted)" }}>
+        <div style={{ fontWeight: 600 }}>{label || `${pos}th`}</div>
+        <div>2025-26</div>
+      </div>
+    </div>
+  );
+}
+
 export default function ClubPage() {
   const { id } = useParams();
   const { data: clubs } = useCached("clubs:epl", 7 * DAY, () => fetchTeams(EPL.slug));
   const { data: moves } = useCached("transfers:epl", 30 * 60 * 1000, () => fetchTransactions(EPL.slug));
+  const { data: table } = useCached("table:epl", DAY, () => fetchLeagueTable(EPL.slug));
   const { favs, toggle } = useFavorites("epl");
   const [picked, setPicked] = useState(null);
 
@@ -27,6 +50,9 @@ export default function ClubPage() {
   const ins = (moves || []).filter((m) => m.toId === id || (club && m.to === club.name));
   const outs = (moves || []).filter((m) => m.fromId === id || (club && m.from === club.name));
   const clubMoves = [...ins, ...outs];
+
+  const tableRow = table?.rows?.find((r) => r.team.espnId === id || r.team.name === club?.name);
+  const tablePos = tableRow ? table.rows.indexOf(tableRow) + 1 : null;
 
   const profile = useAiContent("club:epl:" + id, () => clubPrompt(club, clubMoves), {
     ttlMs: DAY,
@@ -82,6 +108,19 @@ export default function ClubPage() {
             {favs.includes(id) ? "★" : "☆"}
           </button>
         </div>
+
+        {(tablePos || tableRow) && (
+          <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+            {tablePos && <PositionBadge pos={tablePos} />}
+            {tableRow && (
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                P{tableRow.p} W{tableRow.w} D{tableRow.d} L{tableRow.l} ·{" "}
+                <span style={{ color: "var(--chalk)" }}>{tableRow.pts} pts</span> ·{" "}
+                GD {tableRow.gf - tableRow.ga > 0 ? "+" : ""}{tableRow.gf - tableRow.ga}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <AiCard title={`${club.name} right now`} ai={profile} cta="✨ Club profile" />
@@ -95,6 +134,12 @@ export default function ClubPage() {
           </div>
         </>
       )}
+      {ins.length === 0 && outs.length === 0 && (
+        <div className="card" style={{ padding: 12, marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
+          No confirmed moves this window yet. Check the{" "}
+          <Link to="/epl">transfers page</Link> for the latest deals and rumors.
+        </div>
+      )}
 
       <h2 className="disp section-h">SQUAD</h2>
       <div className="card" style={{ padding: "6px 14px 12px" }}>
@@ -102,8 +147,7 @@ export default function ClubPage() {
       </div>
 
       <p style={{ fontSize: 12, color: "var(--muted)", margin: "12px 0 20px" }}>
-        {EPL.season.label} fixtures and results will appear here once the schedule is released.{" "}
-        {EPL.season.fixturesNote}
+        {EPL.season.label} fixtures and results will appear once the schedule is released.
       </p>
 
       {picked && (

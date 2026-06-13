@@ -44,12 +44,15 @@ export function normalizeEvent(ev) {
   };
 }
 
-export async function fetchScoreboard(fromYmd, toYmd, { bust = false } = {}) {
-  // bust: minute-stamped param so ESPN's CDN edge can't replay a stale body
-  // while we're polling a live match. Off for past/future fixtures so those
-  // stay cacheable offline.
+export async function fetchScoreboard(fromYmd, toYmd, { bust = false, league = LEAGUE } = {}) {
   const extra = bust ? `&_=${Math.floor(Date.now() / 60000)}` : "";
-  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/scoreboard?dates=${fromYmd}-${toYmd}${extra}`);
+  const data = await getJson(`${ESPN}/site/v2/sports/${league}/scoreboard?dates=${fromYmd}-${toYmd}${extra}`);
+  return (data.events || []).map(normalizeEvent);
+}
+
+export async function fetchLeagueMatches(league, { bust = false } = {}) {
+  const extra = bust ? `&_=${Math.floor(Date.now() / 60000)}` : "";
+  const data = await getJson(`${ESPN}/site/v2/sports/${league}/scoreboard?limit=100${extra}`);
   return (data.events || []).map(normalizeEvent);
 }
 
@@ -116,9 +119,36 @@ const STAT_ROWS = [
   ["Offsides", ["offsides"]],
 ];
 
-export async function fetchSummary(eventId) {
-  const data = await getJson(`${ESPN}/site/v2/sports/${LEAGUE}/summary?event=${encodeURIComponent(eventId)}`);
-  const out = { events: null, lineups: null, info: null, stats: null, commentary: null };
+export async function fetchSummary(eventId, league = LEAGUE) {
+  const data = await getJson(`${ESPN}/site/v2/sports/${league}/summary?event=${encodeURIComponent(eventId)}`);
+  const out = { events: null, lineups: null, info: null, stats: null, commentary: null, match: null };
+
+  try {
+    const hComp = data.header?.competitions?.[0] || {};
+    const hcs = hComp.competitors || [];
+    const hHome = hcs.find((c) => c.homeAway === "home") || hcs[0] || {};
+    const hAway = hcs.find((c) => c.homeAway === "away") || hcs[1] || {};
+    const mt = (c) => ({
+      code: c.team?.abbreviation || null,
+      name: c.team?.displayName || c.team?.name || "TBD",
+      flag: "", logo: c.team?.logos?.[0]?.href || c.team?.logo || null,
+      espnId: c.team?.id ? String(c.team.id) : null,
+    });
+    const hst = hComp.status || {};
+    const hState = hst.type?.state || "pre";
+    let hStatus = "UP";
+    if (hState === "in") hStatus = hst.type?.name === "STATUS_HALFTIME" ? "HT" : "LIVE " + (hst.displayClock || "");
+    if (hState === "post") hStatus = "FT";
+    out.match = {
+      id: String(data.header?.id ?? eventId), home: mt(hHome), away: mt(hAway),
+      hg: hState === "pre" ? null : Number(hHome.score ?? 0),
+      ag: hState === "pre" ? null : Number(hAway.score ?? 0),
+      state: hState, status: hStatus,
+      kickoff: data.header?.gameDate || hComp.date || "",
+      city: hComp.venue?.address?.city || "", venue: hComp.venue?.fullName || "",
+      stage: hComp.notes?.[0]?.headline || "",
+    };
+  } catch { /* header unavailable */ }
 
   try {
     const list = data.keyEvents || [];

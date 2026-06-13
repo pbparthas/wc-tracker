@@ -28,6 +28,7 @@ const EplMatchesPage = React.lazy(() => import("./pages/epl/EplMatchesPage.jsx")
 const TablePage = React.lazy(() => import("./pages/epl/TablePage.jsx"));
 const ClubsPage = React.lazy(() => import("./pages/epl/ClubsPage.jsx"));
 const ClubPage = React.lazy(() => import("./pages/epl/ClubPage.jsx"));
+const EplMatchDetailPage = React.lazy(() => import("./pages/epl/EplMatchDetailPage.jsx"));
 
 const updateSW = registerSW({
   onNeedRefresh() {
@@ -54,6 +55,7 @@ const router = createHashRouter([
       { path: "epl/table", element: <TablePage /> },
       { path: "epl/clubs", element: <ClubsPage /> },
       { path: "epl/club/:id", element: <ClubPage /> },
+      { path: "epl/match/:id", element: <EplMatchDetailPage /> },
     ],
   },
 ]);

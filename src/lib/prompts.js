@@ -206,6 +206,42 @@ export function clubPrompt(club, moves) {
   return lines.join("\n");
 }
 
+export function leaguePreviewPrompt(match, leagueName) {
+  const p = istParts(match.kickoff);
+  return [
+    `Using Google Search, write a pre-match preview for ${match.home.name} vs ${match.away.name} in the ${leagueName}.`,
+    match.stage ? `This is ${match.stage}.` : "",
+    p ? `Kickoff: ${p.day} at ${p.time} IST.` : "",
+    "Cover recent form, key absences, the tactical matchup, and your prediction.",
+    "Write 150-200 words, vivid but factual. Use light markdown: short paragraphs and **bold** for emphasis.",
+  ].filter(Boolean).join("\n");
+}
+
+export function leagueRecapPrompt(match, summary, leagueName) {
+  const lines = [
+    `Write a post-match recap of ${match.home.name} ${match.hg} - ${match.ag} ${match.away.name} in the ${leagueName}.`,
+    match.stage ? `${match.stage}.` : "",
+  ];
+  const evs = (summary?.events || []).filter((e) => ["goal", "og", "pen", "red"].includes(e.kind));
+  if (evs.length) {
+    lines.push("Key events (authoritative):");
+    for (const e of evs) lines.push(`- ${e.minute} ${e.label}: ${e.player || e.text}${e.team ? ` (${e.team.name})` : ""}`);
+  }
+  lines.push("Tell the story of the match and what it means for both sides. 150-200 words.");
+  return lines.filter(Boolean).join("\n");
+}
+
+export function rumorMillPrompt(leagueName, clubNames = []) {
+  return (
+    `Today is ${todayLabel()}. Using Google Search, compile the freshest ${leagueName} transfer RUMORS ` +
+    "from the last 48 hours — credible sources only. For each: player, clubs involved, and firmness " +
+    "(done deal pending medical / advanced talks / concrete interest / early links). " +
+    (clubNames.length ? `Focus on rumors involving: ${clubNames.join(", ")}. ` : "") +
+    "No completed deals (those go in the confirmed list). Most credible first, up to 12 items. " +
+    "If credible rumor coverage is thin today, say so — don't pad from memory."
+  );
+}
+
 export function espnDownPrompt() {
   return (
     "Using Google Search, find the latest FIFA World Cup 2026 scores: yesterday's results and today's fixtures " +
