@@ -31,16 +31,13 @@ export default function MatchesPage() {
     [matches, day]
   );
 
-  const isFavMatch = (m) => favs.includes(m.home.code) || favs.includes(m.away.code);
   const favAll = useMemo(
     () => matches.filter((m) => favs.includes(m.home.code) || favs.includes(m.away.code)),
     [matches, favs]
   );
-  const favMatches = dayMatches.filter(isFavMatch);
-  const rest = dayMatches.filter((m) => !isFavMatch(m));
-  const live = rest.filter((m) => m.state === "in");
-  const up = rest.filter((m) => m.state === "pre");
-  const done = rest.filter((m) => m.state === "post").reverse();
+  const live = dayMatches.filter((m) => m.state === "in");
+  const up = dayMatches.filter((m) => m.state === "pre");
+  const done = dayMatches.filter((m) => m.state === "post").reverse();
 
   const todayMatches = useMemo(
     () => matches.filter((m) => istParts(m.kickoff)?.dateKey === today),
@@ -118,12 +115,6 @@ export default function MatchesPage() {
           </div>
         )}
 
-        {favMatches.length > 0 && (
-          <>
-            <h2 className="disp section-h" style={{ color: "var(--saffron)" }}>YOUR TEAMS</h2>
-            {favMatches.map((m) => <MatchRow key={m.id} m={m} fav />)}
-          </>
-        )}
         {live.length > 0 && (
           <>
             <h2 className="disp section-h" style={{ color: "var(--live)" }}>LIVE NOW</h2>
