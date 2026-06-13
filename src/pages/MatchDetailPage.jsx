@@ -14,12 +14,48 @@ import { useWeather } from "../hooks/useWeather.js";
 import { previewPrompt, recapPrompt, h2hPrompt } from "../lib/prompts.js";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
+const ICONS = { goal: "⚽", og: "⚽", pen: "⚽", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
 
-const ICONS = { goal: "⚽", og: "⚽(og)", pen: "⚽(p)", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
+function isTeam(ev, team) {
+  return ev.team?.name === team.name || ev.team?.code === team.code;
+}
+
+function EventSummary({ events, match }) {
+  if (!events?.length) return null;
+  const goals = events.filter((e) => ["goal", "og", "pen"].includes(e.kind));
+  const reds = events.filter((e) => e.kind === "red");
+  if (!goals.length && !reds.length) return null;
+
+  const homeGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.home) : isTeam(e, match.home)));
+  const awayGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.away) : isTeam(e, match.away)));
+  const homeReds = reds.filter((e) => isTeam(e, match.home));
+  const awayReds = reds.filter((e) => isTeam(e, match.away));
+
+  const Row = ({ icon, player, minute, suffix, align }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: align === "right" ? "flex-end" : "flex-start" }}>
+      {align === "left" && <span>{icon}</span>}
+      <span>{player} {minute}{suffix}</span>
+      {align === "right" && <span>{icon}</span>}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+      <div>
+        {homeGoals.map((e, i) => <Row key={"hg" + i} icon="⚽" player={e.player} minute={e.minute} suffix={e.kind === "og" ? " (og)" : e.kind === "pen" ? " (p)" : ""} align="left" />)}
+        {homeReds.map((e, i) => <Row key={"hr" + i} icon="🟥" player={e.player} minute={e.minute} suffix="" align="left" />)}
+      </div>
+      <div>
+        {awayGoals.map((e, i) => <Row key={"ag" + i} icon="⚽" player={e.player} minute={e.minute} suffix={e.kind === "og" ? " (og)" : e.kind === "pen" ? " (p)" : ""} align="right" />)}
+        {awayReds.map((e, i) => <Row key={"ar" + i} icon="🟥" player={e.player} minute={e.minute} suffix="" align="right" />)}
+      </div>
+    </div>
+  );
+}
 
 function CommentaryCard({ items }) {
   const [open, setOpen] = useState(false);
-  const shown = open ? items : items.slice(0, 3);
+  const shown = open ? items : items.slice(0, 5);
   return (
     <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
       <button className="ai-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
@@ -42,10 +78,7 @@ function Lineup({ side }) {
   if (!side) return null;
   return (
     <div className="lineup-col">
-      <h4>
-        {side.team.name}
-        {side.formation ? ` · ${side.formation}` : ""}
-      </h4>
+      <h4>{side.team.name}{side.formation ? ` · ${side.formation}` : ""}</h4>
       <ul>
         {side.starters.map((p) => (
           <li key={p.name + p.jersey}>
@@ -73,6 +106,7 @@ function Lineup({ side }) {
 
 export default function MatchDetailPage() {
   const { id } = useParams();
+  const [tab, setTab] = useState("overview");
   const { matches, loading } = useSchedule();
   const { standings } = useStandings();
   const match = matches.find((m) => m.id === id);
@@ -101,6 +135,14 @@ export default function MatchDetailPage() {
   const upcoming = match.state === "pre";
   const live = match.state === "in";
 
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    ...(!upcoming && summary?.events?.length ? [{ id: "timeline", label: "Timeline" }] : []),
+    ...(summary?.lineups ? [{ id: "lineups", label: "Lineups" }] : []),
+    ...(!upcoming && summary?.stats?.length ? [{ id: "stats", label: "Stats" }] : []),
+  ];
+  const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
+
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
       <Link to="/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
@@ -125,13 +167,7 @@ export default function MatchDetailPage() {
               {upcoming ? (p ? p.time : "TBC") : `${match.hg ?? "–"} : ${match.ag ?? "–"}`}
             </div>
             {live && (
-              <div className="disp" style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "var(--live)",
-                marginTop: 4,
-                letterSpacing: "0.08em",
-              }}>
+              <div className="disp" style={{ fontSize: 16, fontWeight: 700, color: "var(--live)", marginTop: 4, letterSpacing: "0.08em" }}>
                 {match.status}
               </div>
             )}
@@ -141,6 +177,9 @@ export default function MatchDetailPage() {
             <div style={{ fontWeight: 700, marginTop: 6 }}>{match.away.name}</div>
           </div>
         </div>
+
+        <EventSummary events={summary?.events} match={match} />
+
         <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
           {p ? `${p.day} · ${p.time}` : ""} <span style={{ color: "var(--saffron)", fontWeight: 600 }}>IST</span>
           {match.venue ? ` · ${match.venue}` : ""}
@@ -158,11 +197,90 @@ export default function MatchDetailPage() {
         )}
       </div>
 
-      {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
-      {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
-      {match.state !== "post" && <AiCard title="Head-to-head & form" ai={h2h} cta="✨ H2H & form" />}
+      {tabs.length > 1 && (
+        <div className="match-tabs">
+          {tabs.map((t) => (
+            <button key={t.id} className={"match-tab" + (activeTab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {summary?.stats?.length > 0 && (
+      {activeTab === "overview" && (
+        <>
+          {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
+          {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
+          {match.state !== "post" && <AiCard title="Head-to-head & form" ai={h2h} cta="✨ H2H & form" />}
+
+          {(() => {
+            const st = stadiumFor(match.city);
+            if (!st) return null;
+            const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${st.name}, ${st.city}`)}`;
+            return (
+              <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+                <div className="eyebrow" style={{ marginBottom: 4 }}>🏟 Stadium</div>
+                <div className="disp" style={{ fontSize: 18, fontWeight: 800 }}>{st.name.toUpperCase()}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", margin: "2px 0 8px" }}>
+                  {st.city} · {st.country} · {st.capacity} seats · opened {st.opened}
+                </div>
+                <p style={{ fontSize: 13 }}>{st.facts}</p>
+                <a href={maps} target="_blank" rel="noreferrer noopener" style={{ fontSize: 12, display: "inline-block", marginTop: 8 }}>
+                  📍 View on map →
+                </a>
+              </div>
+            );
+          })()}
+
+          {summary?.info && (summary.info.attendance || summary.info.referee) && (
+            <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
+              {summary.info.attendance ? <div>Attendance: {Number(summary.info.attendance).toLocaleString("en-IN")}</div> : null}
+              {summary.info.referee ? <div>Referee: {summary.info.referee}</div> : null}
+            </div>
+          )}
+
+          {upcoming && !sLoad && !summary?.lineups && (
+            <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
+              <div className="eyebrow" style={{ marginBottom: 4 }}>Starting XI</div>
+              Team sheets usually drop about an hour before kickoff — they'll appear here automatically.
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === "timeline" && (
+        <>
+          {summary?.events?.length > 0 && (
+            <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+              <div className="eyebrow" style={{ marginBottom: 4 }}>Key events</div>
+              <ul className="timeline">
+                {summary.events.map((e, i) => (
+                  <li key={i}>
+                    <span className="min">{e.minute}</span>
+                    <span>
+                      {ICONS[e.kind] || "•"} {e.player || e.text}
+                      {e.team ? <span style={{ color: "var(--muted)" }}> · {e.team.name}</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summary?.commentary?.length > 0 && <CommentaryCard items={summary.commentary} />}
+        </>
+      )}
+
+      {activeTab === "lineups" && summary?.lineups && (
+        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Starting XI & bench</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Lineup side={summary.lineups.home} />
+            <Lineup side={summary.lineups.away} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === "stats" && summary?.stats?.length > 0 && (
         <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
           <div className="eyebrow" style={{ marginBottom: 4 }}>Match stats</div>
           {summary.stats.map((s) => (
@@ -175,76 +293,10 @@ export default function MatchDetailPage() {
         </div>
       )}
 
-      {summary?.events?.length > 0 && (
-        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-          <div className="eyebrow" style={{ marginBottom: 4 }}>Timeline</div>
-          <ul className="timeline">
-            {summary.events.map((e, i) => (
-              <li key={i}>
-                <span className="min">{e.minute}</span>
-                <span>
-                  {ICONS[e.kind] || "•"} {e.player || e.text}
-                  {e.team ? <span style={{ color: "var(--muted)" }}> · {e.team.name}</span> : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {summary?.commentary?.length > 0 && <CommentaryCard items={summary.commentary} />}
-
-      {summary?.lineups && (summary.lineups.home || summary.lineups.away) ? (
-        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-          <div className="eyebrow">Starting XI & bench</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Lineup side={summary.lineups.home} />
-            <Lineup side={summary.lineups.away} />
-          </div>
-        </div>
-      ) : upcoming && !sLoad ? (
-        <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
-          <div className="eyebrow" style={{ marginBottom: 4 }}>Starting XI</div>
-          Team sheets usually drop about an hour before kickoff — they'll appear here automatically.
-          Until then, browse each side's full tournament squad from the Teams tab.
-        </div>
-      ) : null}
-
-      {(() => {
-        const st = stadiumFor(match.city);
-        if (!st) return null;
-        const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${st.name}, ${st.city}`)}`;
-        return (
-          <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-            <div className="eyebrow" style={{ marginBottom: 4 }}>🏟 Stadium</div>
-            <div className="disp" style={{ fontSize: 18, fontWeight: 800 }}>{st.name.toUpperCase()}</div>
-            <div style={{ fontSize: 12, color: "var(--muted)", margin: "2px 0 8px" }}>
-              {st.city} · {st.country} · {st.capacity} seats · opened {st.opened}
-            </div>
-            <p style={{ fontSize: 13 }}>{st.facts}</p>
-            <a
-              href={maps}
-              target="_blank"
-              rel="noreferrer noopener"
-              style={{ fontSize: 12, display: "inline-block", marginTop: 8 }}
-            >
-              📍 View on map →
-            </a>
-          </div>
-        );
-      })()}
-
-      {summary?.info && (summary.info.attendance || summary.info.referee) && (
-        <div className="card" style={{ padding: "12px 14px", marginBottom: 20, fontSize: 13, color: "var(--muted)" }}>
-          {summary.info.attendance ? <div>Attendance: {Number(summary.info.attendance).toLocaleString("en-IN")}</div> : null}
-          {summary.info.referee ? <div>Referee: {summary.info.referee}</div> : null}
-        </div>
-      )}
-
       {sLoad && !summary && (
         <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading match details…</p>
       )}
-      {!sLoad && !summary?.events?.length && !summary?.lineups && !upcoming && (
+      {!sLoad && !summary?.events?.length && !summary?.lineups && !upcoming && activeTab === "overview" && (
         <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Detailed match data isn't available for this fixture yet.</p>
       )}
     </div>

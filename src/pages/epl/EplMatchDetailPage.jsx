@@ -13,11 +13,48 @@ import { istParts } from "../../lib/time.js";
 import { leaguePreviewPrompt, leagueRecapPrompt } from "../../lib/prompts.js";
 
 const EPL = COMPETITIONS.epl;
-const ICONS = { goal: "⚽", og: "⚽(og)", pen: "⚽(p)", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
+const ICONS = { goal: "⚽", og: "⚽", pen: "⚽", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
+
+function isTeam(ev, team) {
+  return ev.team?.name === team.name || ev.team?.code === team.code;
+}
+
+function EventSummary({ events, match }) {
+  if (!events?.length) return null;
+  const goals = events.filter((e) => ["goal", "og", "pen"].includes(e.kind));
+  const reds = events.filter((e) => e.kind === "red");
+  if (!goals.length && !reds.length) return null;
+
+  const homeGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.home) : isTeam(e, match.home)));
+  const awayGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.away) : isTeam(e, match.away)));
+  const homeReds = reds.filter((e) => isTeam(e, match.home));
+  const awayReds = reds.filter((e) => isTeam(e, match.away));
+
+  const Row = ({ icon, player, minute, suffix, align }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: align === "right" ? "flex-end" : "flex-start" }}>
+      {align === "left" && <span>{icon}</span>}
+      <span>{player} {minute}{suffix}</span>
+      {align === "right" && <span>{icon}</span>}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+      <div>
+        {homeGoals.map((e, i) => <Row key={"hg" + i} icon="⚽" player={e.player} minute={e.minute} suffix={e.kind === "og" ? " (og)" : e.kind === "pen" ? " (p)" : ""} align="left" />)}
+        {homeReds.map((e, i) => <Row key={"hr" + i} icon="🟥" player={e.player} minute={e.minute} suffix="" align="left" />)}
+      </div>
+      <div>
+        {awayGoals.map((e, i) => <Row key={"ag" + i} icon="⚽" player={e.player} minute={e.minute} suffix={e.kind === "og" ? " (og)" : e.kind === "pen" ? " (p)" : ""} align="right" />)}
+        {awayReds.map((e, i) => <Row key={"ar" + i} icon="🟥" player={e.player} minute={e.minute} suffix="" align="right" />)}
+      </div>
+    </div>
+  );
+}
 
 function CommentaryCard({ items }) {
   const [open, setOpen] = useState(false);
-  const shown = open ? items : items.slice(0, 3);
+  const shown = open ? items : items.slice(0, 5);
   return (
     <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
       <button className="ai-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
@@ -68,6 +105,7 @@ function Lineup({ side }) {
 
 export default function EplMatchDetailPage() {
   const { id } = useParams();
+  const [tab, setTab] = useState("overview");
   const { data: allMatches } = useCached("eplmatches", 10 * 60 * 1000, () => fetchLeagueMatches(EPL.slug));
 
   const [summary, setSummary] = useState(() => cacheGet("sum:epl:" + id));
@@ -126,6 +164,14 @@ export default function EplMatchDetailPage() {
   const upcoming = state === "pre";
   const live = state === "in";
 
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    ...(!upcoming && summary?.events?.length ? [{ id: "timeline", label: "Timeline" }] : []),
+    ...(summary?.lineups ? [{ id: "lineups", label: "Lineups" }] : []),
+    ...(!upcoming && summary?.stats?.length ? [{ id: "stats", label: "Stats" }] : []),
+  ];
+  const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
+
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
       <Link to="/epl/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
@@ -160,16 +206,79 @@ export default function EplMatchDetailPage() {
             <div style={{ fontWeight: 700, marginTop: 6 }}>{match.away.name}</div>
           </div>
         </div>
+
+        <EventSummary events={summary?.events} match={match} />
+
         <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
           {p ? `${p.day} · ${p.time}` : ""} <span style={{ color: "var(--saffron)", fontWeight: 600 }}>IST</span>
           {match.venue ? ` · ${match.venue}` : ""}
         </div>
       </div>
 
-      {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
-      {state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
+      {tabs.length > 1 && (
+        <div className="match-tabs">
+          {tabs.map((t) => (
+            <button key={t.id} className={"match-tab" + (activeTab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {summary?.stats?.length > 0 && (
+      {activeTab === "overview" && (
+        <>
+          {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
+          {state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
+
+          {summary?.info && (summary.info.attendance || summary.info.referee) && (
+            <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
+              {summary.info.attendance ? <div>Attendance: {Number(summary.info.attendance).toLocaleString("en-IN")}</div> : null}
+              {summary.info.referee ? <div>Referee: {summary.info.referee}</div> : null}
+            </div>
+          )}
+
+          {upcoming && !loading && !summary?.lineups && (
+            <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
+              <div className="eyebrow" style={{ marginBottom: 4 }}>Starting XI</div>
+              Team sheets usually drop about an hour before kickoff — they'll appear here automatically.
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === "timeline" && (
+        <>
+          {summary?.events?.length > 0 && (
+            <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+              <div className="eyebrow" style={{ marginBottom: 4 }}>Key events</div>
+              <ul className="timeline">
+                {summary.events.map((e, i) => (
+                  <li key={i}>
+                    <span className="min">{e.minute}</span>
+                    <span>
+                      {ICONS[e.kind] || "•"} {e.player || e.text}
+                      {e.team ? <span style={{ color: "var(--muted)" }}> · {e.team.name}</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summary?.commentary?.length > 0 && <CommentaryCard items={summary.commentary} />}
+        </>
+      )}
+
+      {activeTab === "lineups" && summary?.lineups && (
+        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Starting XI & bench</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Lineup side={summary.lineups.home} />
+            <Lineup side={summary.lineups.away} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === "stats" && summary?.stats?.length > 0 && (
         <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
           <div className="eyebrow" style={{ marginBottom: 4 }}>Match stats</div>
           {summary.stats.map((s) => (
@@ -179,47 +288,6 @@ export default function EplMatchDetailPage() {
               <b>{s.away}</b>
             </div>
           ))}
-        </div>
-      )}
-
-      {summary?.events?.length > 0 && (
-        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-          <div className="eyebrow" style={{ marginBottom: 4 }}>Timeline</div>
-          <ul className="timeline">
-            {summary.events.map((e, i) => (
-              <li key={i}>
-                <span className="min">{e.minute}</span>
-                <span>
-                  {ICONS[e.kind] || "•"} {e.player || e.text}
-                  {e.team ? <span style={{ color: "var(--muted)" }}> · {e.team.name}</span> : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {summary?.commentary?.length > 0 && <CommentaryCard items={summary.commentary} />}
-
-      {summary?.lineups && (summary.lineups.home || summary.lineups.away) ? (
-        <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-          <div className="eyebrow">Starting XI & bench</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Lineup side={summary.lineups.home} />
-            <Lineup side={summary.lineups.away} />
-          </div>
-        </div>
-      ) : upcoming && !loading ? (
-        <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
-          <div className="eyebrow" style={{ marginBottom: 4 }}>Starting XI</div>
-          Team sheets usually drop about an hour before kickoff — they'll appear here automatically.
-        </div>
-      ) : null}
-
-      {summary?.info && (summary.info.attendance || summary.info.referee) && (
-        <div className="card" style={{ padding: "12px 14px", marginBottom: 20, fontSize: 13, color: "var(--muted)" }}>
-          {summary.info.attendance ? <div>Attendance: {Number(summary.info.attendance).toLocaleString("en-IN")}</div> : null}
-          {summary.info.referee ? <div>Referee: {summary.info.referee}</div> : null}
         </div>
       )}
 
