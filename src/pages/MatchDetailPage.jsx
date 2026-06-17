@@ -26,7 +26,7 @@ export default function MatchDetailPage() {
   const { summary, loading: sLoad } = useMatchSummary(id, schedMatch?.state);
   const match = schedMatch && summary?.match
     ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag }
-    : schedMatch;
+    : schedMatch || summary?.match || null;
 
   const preview = useAiContent("preview:" + id, () => previewPrompt(match, standings));
   const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
@@ -46,7 +46,7 @@ export default function MatchDetailPage() {
   if (!match) {
     return (
       <div className="wrap" style={{ paddingTop: 20 }}>
-        {loading ? (
+        {loading || sLoad ? (
           <p className="pulse" style={{ color: "var(--muted)" }}>Loading match…</p>
         ) : (
           <p style={{ color: "var(--muted)" }}>
