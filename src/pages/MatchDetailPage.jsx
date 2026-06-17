@@ -8,6 +8,7 @@ import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
 import { useMatchSummary } from "../hooks/useMatchSummary.js";
 import { useAiContent } from "../hooks/useAiContent.js";
+import { useSwipeTabs } from "../hooks/useSwipeTabs.js";
 import { istParts } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
 import { stadiumFor } from "../data/stadiums.js";
@@ -57,9 +58,10 @@ export default function MatchDetailPage() {
     ...(!upcoming && summary?.stats?.length ? [{ id: "stats", label: "Stats" }] : []),
   ];
   const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
+  const swipe = useSwipeTabs(tabs, activeTab, setTab);
 
   return (
-    <div className="wrap" style={{ paddingTop: 14 }}>
+    <div className="wrap" style={{ paddingTop: 14 }} {...swipe}>
       <Link to="/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
 
       <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: live ? "var(--live)" : undefined }}>
@@ -172,7 +174,7 @@ export default function MatchDetailPage() {
 
       {activeTab === "lineups" && summary?.lineups && (
         <>
-          <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
+          <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} match={match} />
           <BenchList home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
         </>
       )}

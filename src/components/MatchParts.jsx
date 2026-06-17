@@ -19,6 +19,13 @@ function playerMatchEvents(player, events) {
   return (events || []).filter((e) => e.player && nameMatch(e.player, player.name) && e.kind !== "event");
 }
 
+function shortName(name) {
+  if (!name) return "?";
+  const parts = name.split(" ");
+  if (parts.length === 1) return parts[0];
+  return parts[0][0] + ". " + parts.slice(1).join(" ");
+}
+
 /* ── Goal scorers + red cards under the score ─────────────────────── */
 
 export function EventSummary({ events, match }) {
@@ -54,7 +61,7 @@ export function EventSummary({ events, match }) {
   );
 }
 
-/* ── Player info overlay ──────────────────────────────────────────── */
+/* ── Player info overlay (Google-style bottom sheet) ─────────────── */
 
 function findStat(stats, ...keys) {
   for (const k of keys) {
@@ -63,68 +70,115 @@ function findStat(stats, ...keys) {
   return undefined;
 }
 
-function PlayerInfo({ player, events, subMinute, playerStats, onClose }) {
+function PlayerInfo({ player, events, subMinute, playerStats, match, onClose }) {
   const evs = events.filter((e) => e.kind !== "event");
   const stats = playerStats?.[player.name] || {};
   const statRows = [
-    ["Minutes", findStat(stats, "minutesPlayed", "MIN", "minutes")],
+    subMinute ? ["Substitution time", null, subMinute] : null,
+    ["Minutes played", findStat(stats, "minutesPlayed", "MIN", "minutes")],
+    ["Accurate passes", findStat(stats, "totalPasses", "passCompletions", "accuratePasses", "PC")],
     ["Goals", findStat(stats, "goals", "G", "totalGoals")],
     ["Assists", findStat(stats, "assists", "A")],
     ["Shots", findStat(stats, "totalShots", "shots", "SH", "SHT")],
-    ["On target", findStat(stats, "shotsOnTarget", "SOT", "ST")],
-    ["Passes", findStat(stats, "totalPasses", "passCompletions", "PC")],
-    ["Pass accuracy", findStat(stats, "passAccuracy", "PA")],
-    ["Tackles", findStat(stats, "tackles", "TK")],
+    ["Shots on target", findStat(stats, "shotsOnTarget", "SOT", "ST")],
+    ["Tackles won", findStat(stats, "tackles", "TK", "tacklesWon")],
     ["Fouls", findStat(stats, "foulsCommitted", "fouls", "FC", "FL")],
     ["Yellow cards", findStat(stats, "yellowCards", "YC")],
     ["Red cards", findStat(stats, "redCards", "RC")],
     ["Saves", findStat(stats, "saves", "SV")],
-  ].filter(([, v]) => v !== undefined && v !== null && v !== "0" && v !== 0);
+  ].filter(Boolean).filter(([, v, v2]) => (v2 !== undefined) || (v !== undefined && v !== null));
 
   return (
-    <div className="card" style={{ padding: 14, marginTop: 10, marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          {player.headshot ? (
-            <img src={player.headshot} alt="" width={52} height={52} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0, background: "#222" }} />
-          ) : (
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--pitch)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
-              {player.jersey || "?"}
-            </div>
-          )}
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{player.name}</div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>
-              {player.jersey ? `#${player.jersey} · ` : ""}{player.pos || ""}
-              {subMinute ? <span style={{ color: "var(--live)" }}> · ↓ {subMinute}</span> : ""}
-            </div>
+    <div className="card" style={{ padding: 0, marginTop: 10, marginBottom: 10, overflow: "hidden" }}>
+      {/* Header with player photo + name */}
+      <div style={{ background: "rgba(255,255,255,0.04)", padding: "16px 16px 14px", display: "flex", alignItems: "center", gap: 14 }}>
+        {player.headshot ? (
+          <img src={player.headshot} alt="" width={64} height={64} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0, background: "#222", border: "2px solid var(--line)" }} />
+        ) : (
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--pitch)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, flexShrink: 0, border: "2px solid var(--line)" }}>
+            {player.jersey || "?"}
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 18 }}>{shortName(player.name)}</div>
+          <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>
+            {player.jersey ? `#${player.jersey}` : ""}{player.pos ? ` · ${player.pos}` : ""}
           </div>
         </div>
-        <button style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 18, cursor: "pointer", padding: 4 }} onClick={onClose} aria-label="Close">✕</button>
+        <button style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 22, cursor: "pointer", padding: 6, lineHeight: 1 }} onClick={onClose} aria-label="Close">✕</button>
       </div>
+
+      {/* Match context line */}
+      {match && (
+        <div style={{ padding: "10px 16px", borderTop: "1px solid var(--line)", fontSize: 13, color: "var(--muted)", display: "flex", alignItems: "center", gap: 8 }}>
+          {match.home?.logo && <img src={match.home.logo} alt="" width={16} height={16} style={{ borderRadius: 2, objectFit: "contain" }} />}
+          <span>{match.home?.name || "Home"}</span>
+          <span style={{ fontWeight: 700, color: "var(--chalk)" }}>{match.hg ?? "?"} – {match.ag ?? "?"}</span>
+          <span>{match.away?.name || "Away"}</span>
+          {match.away?.logo && <img src={match.away.logo} alt="" width={16} height={16} style={{ borderRadius: 2, objectFit: "contain" }} />}
+          <span style={{ marginLeft: "auto", fontSize: 12 }}>{match.status || ""}</span>
+        </div>
+      )}
+
+      {/* Match events for this player */}
       {evs.length > 0 && (
-        <div style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+        <div style={{ padding: "0 16px", borderTop: "1px solid var(--line)" }}>
           {evs.map((e, i) => (
-            <div key={i} style={{ fontSize: 13, padding: "3px 0", display: "flex", gap: 6, alignItems: "center" }}>
-              <span>{ICONS[e.kind] || "•"}</span>
-              <span>{e.label} · {e.minute}</span>
+            <div key={i} style={{ fontSize: 13, padding: "10px 0", display: "flex", gap: 8, alignItems: "center", borderTop: i > 0 ? "1px solid var(--line)" : "none" }}>
+              <span style={{ fontSize: 14 }}>{ICONS[e.kind] || "•"}</span>
+              <span style={{ flex: 1 }}>{e.label}</span>
+              <span style={{ color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{e.minute}</span>
             </div>
           ))}
         </div>
       )}
-      {statRows.length > 0 && (
-        <div style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
-          <div className="eyebrow" style={{ marginBottom: 4 }}>Match stats</div>
-          {statRows.map(([label, val]) => (
-            <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", borderTop: "1px solid var(--line)" }}>
-              <span style={{ color: "var(--muted)" }}>{label}</span>
-              <span style={{ fontWeight: 600 }}>{val}</span>
-            </div>
-          ))}
-        </div>
+
+      {/* Match stats */}
+      <div style={{ padding: "0 16px", borderTop: "1px solid var(--line)" }}>
+        <div style={{ fontWeight: 700, fontSize: 15, padding: "12px 0 6px" }}>Match stats</div>
+        {statRows.length > 0 ? statRows.map(([label, val, alt]) => (
+          <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, padding: "10px 0", borderTop: "1px solid var(--line)" }}>
+            <span>{label}</span>
+            <span style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              {label === "Substitution time" && <span style={{ color: "var(--live)", fontSize: 13 }}>↓</span>}
+              {alt || val}
+            </span>
+          </div>
+        )) : (
+          <div style={{ fontSize: 13, color: "var(--muted)", padding: "10px 0" }}>No detailed stats available.</div>
+        )}
+      </div>
+
+      <div style={{ height: 8 }} />
+    </div>
+  );
+}
+
+/* ── Team header bar (Google style) ──────────────────────────────── */
+
+function TeamHeader({ side, position }) {
+  if (!side) return null;
+  const isTop = position === "top";
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "10px 14px",
+      background: "rgba(0,0,0,0.35)",
+      borderRadius: isTop ? "12px 12px 0 0" : "0 0 12px 12px",
+    }}>
+      {side.team?.logo && (
+        <img src={side.team.logo} alt="" width={22} height={22} style={{ borderRadius: 2, objectFit: "contain", flexShrink: 0 }} />
       )}
-      {evs.length === 0 && statRows.length === 0 && !subMinute && (
-        <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)" }}>No detailed stats available.</div>
+      <span style={{ fontWeight: 700, fontSize: 14, color: "#fff", flex: 1 }}>
+        {side.team?.name || "Team"}
+      </span>
+      {side.formation && (
+        <span style={{
+          background: "#2e7d32", color: "#fff", fontSize: 12, fontWeight: 700,
+          padding: "3px 10px", borderRadius: 12, letterSpacing: "0.03em",
+        }}>
+          {side.formation}
+        </span>
       )}
     </div>
   );
@@ -137,39 +191,77 @@ function PlayerDot({ player, events, subMinute, picked, onPick, imgErrors, onImg
   const pEvs = playerMatchEvents(player, events);
   const goalCount = pEvs.filter((e) => ["goal", "pen"].includes(e.kind)).length;
   const hasYellow = pEvs.some((e) => e.kind === "yellow");
+  const hasRed = pEvs.some((e) => e.kind === "red");
   const isSelected = picked?.name === player.name;
 
   return (
     <div
-      style={{ textAlign: "center", flex: "0 0 auto", minWidth: 0, position: "relative", cursor: "pointer" }}
+      style={{ textAlign: "center", flex: "0 0 auto", minWidth: 0, position: "relative", cursor: "pointer", padding: "0 2px" }}
       onClick={() => onPick(isSelected ? null : player)}
     >
+      {/* Sub arrow badge */}
       {subMinute && (
-        <div style={{ position: "absolute", top: -2, right: -2, zIndex: 2, background: "#d32f2f", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 700 }}>↓</div>
+        <div style={{
+          position: "absolute", top: -3, right: 2, zIndex: 2,
+          background: "#d32f2f", borderRadius: "50%",
+          width: 18, height: 18,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11, color: "#fff", fontWeight: 700,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+        }}>{"↓"}</div>
       )}
-      {hasYellow && (
-        <div style={{ position: "absolute", top: -2, left: -2, zIndex: 2, fontSize: 10 }}>🟨</div>
+      {/* Yellow card badge */}
+      {hasYellow && !hasRed && (
+        <div style={{
+          position: "absolute", top: -3, left: 2, zIndex: 2,
+          width: 14, height: 18, borderRadius: 2,
+          background: "#fdd835", boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+        }} />
       )}
+      {/* Red card badge */}
+      {hasRed && (
+        <div style={{
+          position: "absolute", top: -3, left: 2, zIndex: 2,
+          width: 14, height: 18, borderRadius: 2,
+          background: "#d32f2f", boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+        }} />
+      )}
+      {/* Goal badge */}
       {goalCount > 0 && (
-        <div style={{ position: "absolute", bottom: 10, right: -4, zIndex: 2, fontSize: 10, display: "flex", alignItems: "center" }}>
-          ⚽{goalCount > 1 ? <span style={{ fontSize: 8, fontWeight: 700, color: "#fff" }}>{goalCount}</span> : ""}
+        <div style={{
+          position: "absolute", bottom: 18, right: 0, zIndex: 2,
+          background: "rgba(0,0,0,0.6)", borderRadius: 8,
+          padding: "1px 4px", fontSize: 10,
+          display: "flex", alignItems: "center", gap: 2,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+        }}>
+          {"⚽"}{goalCount > 1 && <span style={{ fontSize: 9, fontWeight: 700, color: "#fff" }}>{goalCount}</span>}
         </div>
       )}
+
+      {/* Player circle */}
       <div style={{
-        width: 42, height: 42, borderRadius: "50%", overflow: "hidden",
-        margin: "0 auto 3px",
-        background: hasPhoto ? "#222" : "rgba(255,255,255,0.15)",
+        width: 48, height: 48, borderRadius: "50%", overflow: "hidden",
+        margin: "0 auto 4px",
+        background: hasPhoto ? "#1a3a25" : "rgba(255,255,255,0.13)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        border: isSelected ? "2px solid var(--saffron)" : "2px solid rgba(255,255,255,0.5)",
-        fontSize: 14, fontWeight: 700, color: "#fff",
+        border: isSelected ? "2.5px solid var(--saffron)" : "2.5px solid rgba(255,255,255,0.55)",
+        fontSize: 18, fontWeight: 700, color: "#fff",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
       }}>
         {hasPhoto ? (
-          <img src={player.headshot} alt="" width={42} height={42} loading="lazy" style={{ objectFit: "cover" }} crossOrigin="anonymous" onError={() => onImgErr(player.name)} />
+          <img src={player.headshot} alt="" width={48} height={48} loading="lazy" style={{ objectFit: "cover" }} crossOrigin="anonymous" onError={() => onImgErr(player.name)} />
         ) : (
           player.jersey || "?"
         )}
       </div>
-      <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.9)", maxWidth: 58, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0 auto" }}>
+      {/* Player name */}
+      <div style={{
+        fontSize: 10, fontWeight: 600,
+        color: "rgba(255,255,255,0.92)",
+        maxWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        margin: "0 auto", lineHeight: 1.3,
+      }}>
         {player.jersey ? player.jersey + " " : ""}{player.name.split(" ").pop()}
       </div>
     </div>
@@ -217,7 +309,7 @@ function buildSubMap(side, events) {
 
 /* ── Full pitch: both teams on one continuous field ────────────────── */
 
-export function PitchView({ home, away, events, playerStats }) {
+export function PitchView({ home, away, events, playerStats, match }) {
   const [imgErrors, setImgErrors] = useState(new Set());
   const [picked, setPicked] = useState(null);
 
@@ -229,13 +321,11 @@ export function PitchView({ home, away, events, playerStats }) {
   const awaySubs = buildSubMap(away, events);
   const onErr = (name) => setImgErrors((s) => new Set(s).add(name));
 
-  // Away: GK at top → defense → midfield → forwards (near center)
   const awayRows = ap ? [[ap.gk], ...ap.formationRows] : [];
-  // Home: forwards (near center) → midfield → defense → GK at bottom
   const homeRows = hp ? [...hp.formationRows.reverse(), [hp.gk]] : [];
 
   const renderRow = (row, subMap) => (
-    <div style={{ display: "flex", justifyContent: "space-evenly", alignItems: "center", position: "relative", zIndex: 1 }}>
+    <div style={{ display: "flex", justifyContent: "space-evenly", alignItems: "center", position: "relative", zIndex: 1, padding: "0 4px" }}>
       {row.map((p, pi) => (
         <PlayerDot
           key={p.name + pi}
@@ -255,37 +345,39 @@ export function PitchView({ home, away, events, playerStats }) {
     <>
       <div style={{
         position: "relative",
-        background: "linear-gradient(180deg, #1a5c2a 0%, #1f6e31 25%, #237a38 50%, #1f6e31 75%, #1a5c2a 100%)",
+        background: "linear-gradient(180deg, #1a5c2a 0%, #1f6e31 20%, #237a38 50%, #1f6e31 80%, #1a5c2a 100%)",
         borderRadius: 12, overflow: "hidden",
       }}>
         {/* Pitch markings */}
-        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", borderTop: "2px solid rgba(255,255,255,0.22)" }} />
-        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 50, height: 50, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.18)" }} />
-        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 5, height: 5, borderRadius: "50%", background: "rgba(255,255,255,0.3)" }} />
-        {/* Top penalty box (away goal) */}
-        <div style={{ position: "absolute", left: "22%", right: "22%", top: 0, height: "7%", borderBottom: "1px solid rgba(255,255,255,0.18)", borderLeft: "1px solid rgba(255,255,255,0.18)", borderRight: "1px solid rgba(255,255,255,0.18)" }} />
-        {/* Bottom penalty box (home goal) */}
-        <div style={{ position: "absolute", left: "22%", right: "22%", bottom: 0, height: "7%", borderTop: "1px solid rgba(255,255,255,0.18)", borderLeft: "1px solid rgba(255,255,255,0.18)", borderRight: "1px solid rgba(255,255,255,0.18)" }} />
+        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", borderTop: "2px solid rgba(255,255,255,0.18)" }} />
+        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 60, height: 60, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.15)" }} />
+        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.25)" }} />
+        {/* Top penalty area */}
+        <div style={{ position: "absolute", left: "20%", right: "20%", top: 0, height: "8%", borderBottom: "1.5px solid rgba(255,255,255,0.15)", borderLeft: "1.5px solid rgba(255,255,255,0.15)", borderRight: "1.5px solid rgba(255,255,255,0.15)" }} />
+        <div style={{ position: "absolute", left: "32%", right: "32%", top: 0, height: "4%", borderBottom: "1.5px solid rgba(255,255,255,0.12)", borderLeft: "1.5px solid rgba(255,255,255,0.12)", borderRight: "1.5px solid rgba(255,255,255,0.12)" }} />
+        {/* Bottom penalty area */}
+        <div style={{ position: "absolute", left: "20%", right: "20%", bottom: 0, height: "8%", borderTop: "1.5px solid rgba(255,255,255,0.15)", borderLeft: "1.5px solid rgba(255,255,255,0.15)", borderRight: "1.5px solid rgba(255,255,255,0.15)" }} />
+        <div style={{ position: "absolute", left: "32%", right: "32%", bottom: 0, height: "4%", borderTop: "1.5px solid rgba(255,255,255,0.12)", borderLeft: "1.5px solid rgba(255,255,255,0.12)", borderRight: "1.5px solid rgba(255,255,255,0.12)" }} />
+
+        {/* Away team header */}
+        <TeamHeader side={away} position="top" />
 
         {/* Away half */}
         {awayRows.length > 0 && (
-          <div style={{ padding: "18px 8px 12px", display: "flex", flexDirection: "column", gap: 28 }}>
-            <div style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              {away?.team?.name || "Away"} · {away?.formation || ""}
-            </div>
+          <div style={{ padding: "20px 6px 14px", display: "flex", flexDirection: "column", gap: 32 }}>
             {awayRows.map((row, ri) => <React.Fragment key={"a" + ri}>{renderRow(row, awaySubs)}</React.Fragment>)}
           </div>
         )}
 
         {/* Home half */}
         {homeRows.length > 0 && (
-          <div style={{ padding: "12px 8px 18px", display: "flex", flexDirection: "column", gap: 28 }}>
+          <div style={{ padding: "14px 6px 20px", display: "flex", flexDirection: "column", gap: 32 }}>
             {homeRows.map((row, ri) => <React.Fragment key={"h" + ri}>{renderRow(row, homeSubs)}</React.Fragment>)}
-            <div style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              {home?.team?.name || "Home"} · {home?.formation || ""}
-            </div>
           </div>
         )}
+
+        {/* Home team header */}
+        <TeamHeader side={home} position="bottom" />
       </div>
 
       {picked && (
@@ -294,6 +386,7 @@ export function PitchView({ home, away, events, playerStats }) {
           events={playerMatchEvents(picked, events)}
           subMinute={homeSubs.get(picked.name) || awaySubs.get(picked.name)}
           playerStats={playerStats}
+          match={match}
           onClose={() => setPicked(null)}
         />
       )}
@@ -315,45 +408,56 @@ export function BenchList({ home, away, events, playerStats }) {
     const hasPhoto = p.headshot && !imgErrors.has(p.name);
     const pEvs = playerMatchEvents(p, events);
     const goalCount = pEvs.filter((e) => ["goal", "pen"].includes(e.kind)).length;
+    const isSelected = picked?.name === p.name;
     return (
       <div
         key={p.name + i}
-        style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0", borderTop: "1px solid var(--line)", cursor: "pointer", minWidth: 0 }}
-        onClick={() => setPicked(picked?.name === p.name ? null : p)}
+        style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "6px 0", borderTop: "1px solid var(--line)",
+          cursor: "pointer", minWidth: 0,
+          background: isSelected ? "rgba(255,255,255,0.04)" : "none",
+        }}
+        onClick={() => setPicked(isSelected ? null : p)}
       >
         <div style={{
-          width: 24, height: 24, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
+          width: 28, height: 28, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
           background: hasPhoto ? "#222" : "var(--pitch)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 10, fontWeight: 700, color: "var(--chalk)",
+          fontSize: 11, fontWeight: 700, color: "var(--chalk)",
+          border: "1.5px solid var(--line)",
         }}>
           {hasPhoto ? (
-            <img src={p.headshot} alt="" width={24} height={24} loading="lazy" style={{ objectFit: "cover" }} onError={() => onErr(p.name)} />
+            <img src={p.headshot} alt="" width={28} height={28} loading="lazy" style={{ objectFit: "cover" }} onError={() => onErr(p.name)} />
           ) : (
             p.jersey || "?"
           )}
         </div>
-        <div style={{ flex: 1, minWidth: 0, fontSize: 11, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {p.name}
         </div>
-        <span style={{ fontSize: 9, color: "var(--muted)", flexShrink: 0, display: "flex", alignItems: "center", gap: 3 }}>
-          {goalCount > 0 && <span>⚽</span>}
-          {p.subMinute && <span style={{ color: "#4caf50" }}>↑{p.subMinute}</span>}
+        <span style={{ fontSize: 10, color: "var(--muted)", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}>
+          {goalCount > 0 && <span>{"⚽"}</span>}
+          {p.subMinute && <span style={{ color: "#4caf50", fontWeight: 600 }}>{"↑"}{p.subMinute}</span>}
         </span>
       </div>
     );
   };
 
   return (
-    <div className="card" style={{ padding: "10px 14px", marginTop: 10, marginBottom: 10 }}>
-      <div className="eyebrow" style={{ marginBottom: 4 }}>Bench</div>
+    <div className="card" style={{ padding: "12px 14px", marginTop: 10, marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <div className="eyebrow">Bench</div>
+        {home?.team?.logo && <img src={home.team.logo} alt="" width={16} height={16} style={{ borderRadius: 2, objectFit: "contain", marginLeft: "auto" }} />}
+        {away?.team?.logo && <img src={away.team.logo} alt="" width={16} height={16} style={{ borderRadius: 2, objectFit: "contain" }} />}
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
         <div>
-          <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600, padding: "4px 0" }}>{home?.team?.name || "Home"}</div>
+          <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, padding: "4px 0" }}>{home?.team?.name || "Home"}</div>
           {homeSubs.map(renderPlayer)}
         </div>
         <div>
-          <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600, padding: "4px 0" }}>{away?.team?.name || "Away"}</div>
+          <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, padding: "4px 0" }}>{away?.team?.name || "Away"}</div>
           {awaySubs.map(renderPlayer)}
         </div>
       </div>

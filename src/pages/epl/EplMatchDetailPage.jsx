@@ -8,6 +8,7 @@ import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchSummary, fetchLeagueMatches } from "../../lib/espn.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
+import { useSwipeTabs } from "../../hooks/useSwipeTabs.js";
 import { useResume } from "../../hooks/useResume.js";
 import { cacheGet, cacheSet } from "../../lib/storage.js";
 import { istParts } from "../../lib/time.js";
@@ -86,9 +87,10 @@ export default function EplMatchDetailPage() {
     ...(!upcoming && summary?.stats?.length ? [{ id: "stats", label: "Stats" }] : []),
   ];
   const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
+  const swipe = useSwipeTabs(tabs, activeTab, setTab);
 
   return (
-    <div className="wrap" style={{ paddingTop: 14 }}>
+    <div className="wrap" style={{ paddingTop: 14 }} {...swipe}>
       <Link to="/epl/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
 
       <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: live ? "var(--live)" : undefined }}>
@@ -170,7 +172,7 @@ export default function EplMatchDetailPage() {
 
       {activeTab === "lineups" && summary?.lineups && (
         <>
-          <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
+          <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} match={match} />
           <BenchList home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
         </>
       )}
