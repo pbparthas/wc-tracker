@@ -24,20 +24,24 @@ export function useSchedule() {
 
   const anyLive = data.matches.some((m) => m.state === "in");
 
-  // A match might have started but cache still says "pre" — detect this by
-  // checking if any kickoff is in the past but state hasn't flipped yet.
   const kickoffSoon = data.matches.some(
     (m) => m.state === "pre" && new Date(m.kickoff).getTime() - Date.now() < 5 * 60 * 1000
   );
 
+  const recentlyStarted = data.matches.some(
+    (m) => m.state === "pre" && new Date(m.kickoff).getTime() < Date.now()
+  );
+
+  const needsPoll = anyLive || kickoffSoon || recentlyStarted;
+
   useEffect(() => {
-    if (!anyLive && !kickoffSoon) return undefined;
+    if (!needsPoll) return undefined;
     const ms = anyLive ? 60000 : 120000;
     const t = setInterval(() => {
       if (!document.hidden) refresh(true);
     }, ms);
     return () => clearInterval(t);
-  }, [anyLive, kickoffSoon, refresh]);
+  }, [needsPoll, anyLive, refresh]);
 
   useResume(() => refresh(true));
 

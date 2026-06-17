@@ -29,7 +29,13 @@ export function useMatchSummary(eventId, state) {
 
   useEffect(() => {
     if (!eventId) return undefined;
-    if (!(state === "post" && cacheGet(key))) load();
+    const cached = cacheGet(key);
+    const cachedIsLive = cached?.match?.state === "in";
+    if (state === "post" && cached && !cachedIsLive) {
+      setSummary(cached);
+    } else {
+      load();
+    }
     if (state !== "in" && state !== "pre") return undefined;
     const t = setInterval(() => {
       if (!document.hidden) load();

@@ -23,7 +23,10 @@ export default function EplMatchDetailPage() {
   const [summary, setSummary] = useState(() => cacheGet("sum:epl:" + id));
   const [loading, setLoading] = useState(false);
 
-  const match = (allMatches || []).find((m) => m.id === id) || summary?.match || null;
+  const schedMatch = (allMatches || []).find((m) => m.id === id);
+  const match = schedMatch && summary?.match
+    ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag }
+    : schedMatch || summary?.match || null;
   const state = match?.state;
 
   const load = useCallback(async () => {

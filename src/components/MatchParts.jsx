@@ -56,20 +56,30 @@ export function EventSummary({ events, match }) {
 
 /* ── Player info overlay ──────────────────────────────────────────── */
 
+function findStat(stats, ...keys) {
+  for (const k of keys) {
+    if (stats[k] !== undefined && stats[k] !== null) return stats[k];
+  }
+  return undefined;
+}
+
 function PlayerInfo({ player, events, subMinute, playerStats, onClose }) {
   const evs = events.filter((e) => e.kind !== "event");
   const stats = playerStats?.[player.name] || {};
   const statRows = [
-    ["Minutes", stats.minutesPlayed],
-    ["Goals", stats.goals],
-    ["Assists", stats.assists],
-    ["Shots", stats.totalShots || stats.shots],
-    ["On target", stats.shotsOnTarget],
-    ["Fouls", stats.foulsCommitted || stats.fouls],
-    ["Yellow cards", stats.yellowCards],
-    ["Red cards", stats.redCards],
-    ["Saves", stats.saves],
-  ].filter(([, v]) => v !== undefined && v !== null);
+    ["Minutes", findStat(stats, "minutesPlayed", "MIN", "minutes")],
+    ["Goals", findStat(stats, "goals", "G", "totalGoals")],
+    ["Assists", findStat(stats, "assists", "A")],
+    ["Shots", findStat(stats, "totalShots", "shots", "SH", "SHT")],
+    ["On target", findStat(stats, "shotsOnTarget", "SOT", "ST")],
+    ["Passes", findStat(stats, "totalPasses", "passCompletions", "PC")],
+    ["Pass accuracy", findStat(stats, "passAccuracy", "PA")],
+    ["Tackles", findStat(stats, "tackles", "TK")],
+    ["Fouls", findStat(stats, "foulsCommitted", "fouls", "FC", "FL")],
+    ["Yellow cards", findStat(stats, "yellowCards", "YC")],
+    ["Red cards", findStat(stats, "redCards", "RC")],
+    ["Saves", findStat(stats, "saves", "SV")],
+  ].filter(([, v]) => v !== undefined && v !== null && v !== "0" && v !== 0);
 
   return (
     <div className="card" style={{ padding: 14, marginTop: 10, marginBottom: 10 }}>
@@ -146,20 +156,20 @@ function PlayerDot({ player, events, subMinute, picked, onPick, imgErrors, onImg
         </div>
       )}
       <div style={{
-        width: 38, height: 38, borderRadius: "50%", overflow: "hidden",
-        margin: "0 auto 2px",
+        width: 42, height: 42, borderRadius: "50%", overflow: "hidden",
+        margin: "0 auto 3px",
         background: hasPhoto ? "#222" : "rgba(255,255,255,0.15)",
         display: "flex", alignItems: "center", justifyContent: "center",
         border: isSelected ? "2px solid var(--saffron)" : "2px solid rgba(255,255,255,0.5)",
         fontSize: 14, fontWeight: 700, color: "#fff",
       }}>
         {hasPhoto ? (
-          <img src={player.headshot} alt="" width={38} height={38} loading="lazy" style={{ objectFit: "cover" }} onError={() => onImgErr(player.name)} />
+          <img src={player.headshot} alt="" width={42} height={42} loading="lazy" style={{ objectFit: "cover" }} crossOrigin="anonymous" onError={() => onImgErr(player.name)} />
         ) : (
           player.jersey || "?"
         )}
       </div>
-      <div style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.9)", maxWidth: 54, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0 auto" }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.9)", maxWidth: 58, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0 auto" }}>
         {player.jersey ? player.jersey + " " : ""}{player.name.split(" ").pop()}
       </div>
     </div>
@@ -188,11 +198,18 @@ function buildSubMap(side, events) {
   if (!side || !events) return subMap;
   const teamSubs = events.filter((e) => e.kind === "sub" && isTeam(e, side.team));
   for (const e of teamSubs) {
+    if (e.playerOut) {
+      const found = side.starters.find((s) => !subMap.has(s.name) && nameMatch(e.playerOut, s.name));
+      if (found) { subMap.set(found.name, e.minute); continue; }
+    }
     for (const s of side.starters) {
       if (subMap.has(s.name)) continue;
       if (nameMatch(e.player, s.name)) { subMap.set(s.name, e.minute); continue; }
-      const lastName = s.name.split(" ").pop().toLowerCase();
-      if (e.text && e.text.toLowerCase().includes(lastName)) subMap.set(s.name, e.minute);
+      const txt = (e.text || "").toLowerCase();
+      if (!txt) continue;
+      const parts = s.name.split(" ");
+      const lastName = parts[parts.length - 1].toLowerCase();
+      if (lastName.length >= 3 && txt.includes(lastName)) subMap.set(s.name, e.minute);
     }
   }
   return subMap;
@@ -252,7 +269,7 @@ export function PitchView({ home, away, events, playerStats }) {
 
         {/* Away half */}
         {awayRows.length > 0 && (
-          <div style={{ padding: "14px 4px 10px", display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ padding: "18px 8px 12px", display: "flex", flexDirection: "column", gap: 28 }}>
             <div style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
               {away?.team?.name || "Away"} · {away?.formation || ""}
             </div>
@@ -262,7 +279,7 @@ export function PitchView({ home, away, events, playerStats }) {
 
         {/* Home half */}
         {homeRows.length > 0 && (
-          <div style={{ padding: "10px 4px 14px", display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ padding: "12px 8px 18px", display: "flex", flexDirection: "column", gap: 28 }}>
             {homeRows.map((row, ri) => <React.Fragment key={"h" + ri}>{renderRow(row, homeSubs)}</React.Fragment>)}
             <div style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
               {home?.team?.name || "Home"} · {home?.formation || ""}

@@ -107,6 +107,13 @@ export async function fetchStandings() {
   return out;
 }
 
+function playerHeadshot(p) {
+  if (p.athlete?.headshot?.href) return p.athlete.headshot.href;
+  const id = p.athlete?.id;
+  if (!id) return null;
+  return `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${id}.png&w=96&h=70`;
+}
+
 /* Match summary: timeline, lineups, game info. Each section parsed independently. */
 /* Stat rows worth showing, with the ESPN names they ship under. */
 const STAT_ROWS = [
@@ -169,6 +176,7 @@ export async function fetchSummary(eventId, league = LEAGUE) {
           minute: ke.clock?.displayValue || "",
           team: ke.team ? resolveTeam(ke.team) : null,
           player: ke.participants?.[0]?.athlete?.displayName || "",
+          playerOut: kind === "sub" ? (ke.participants?.[1]?.athlete?.displayName || "") : "",
           text: ke.text || "",
         };
       })
@@ -186,10 +194,10 @@ export async function fetchSummary(eventId, league = LEAGUE) {
         formation: r.formation || "",
         starters: roster
           .filter((p) => p.starter)
-          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: p.athlete?.headshot?.href || (p.athlete?.id ? `https://a.espncdn.com/i/headshots/soccer/players/full/${p.athlete.id}.png` : null) })),
+          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: playerHeadshot(p) })),
         subs: roster
           .filter((p) => !p.starter)
-          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: p.athlete?.headshot?.href || (p.athlete?.id ? `https://a.espncdn.com/i/headshots/soccer/players/full/${p.athlete.id}.png` : null), subMinute: p.subbedIn?.displayValue || "" })),
+          .map((p) => ({ name: p.athlete?.displayName || "?", pos: p.position?.abbreviation || "", jersey: p.jersey || "", headshot: playerHeadshot(p), subMinute: p.subbedIn?.displayValue || "" })),
       };
     }
     if (sides.home || sides.away) out.lineups = sides;

@@ -21,8 +21,11 @@ export default function MatchDetailPage() {
   const [tab, setTab] = useState("overview");
   const { matches, loading } = useSchedule();
   const { standings } = useStandings();
-  const match = matches.find((m) => m.id === id);
-  const { summary, loading: sLoad } = useMatchSummary(id, match?.state);
+  const schedMatch = matches.find((m) => m.id === id);
+  const { summary, loading: sLoad } = useMatchSummary(id, schedMatch?.state);
+  const match = schedMatch && summary?.match
+    ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag }
+    : schedMatch;
 
   const preview = useAiContent("preview:" + id, () => previewPrompt(match, standings));
   const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
