@@ -1,49 +1,34 @@
-/* API-Football (api-sports.io) — free tier: 100 req/day, 10 req/min.
-   Key stored in localStorage, never committed or sent anywhere else. */
+/* API-Football via Cloudflare Worker proxy.
+   The proxy holds the API key as a secret — nothing sensitive in the browser. */
 
-const STORAGE_KEY = "golazo:apifootball:key";
-const BASE = "https://v3.football.api-sports.io";
+const PROXY_KEY = "golazo:apifootball:proxy";
+const DEFAULT_PROXY = "https://golazo-api-proxy.pbparthas.workers.dev";
 
-export function getApiKey() {
-  return localStorage.getItem(STORAGE_KEY) || "";
+export function getProxyUrl() {
+  return localStorage.getItem(PROXY_KEY) || DEFAULT_PROXY;
 }
 
-export function setApiKey(key) {
-  if (key) localStorage.setItem(STORAGE_KEY, key);
-  else localStorage.removeItem(STORAGE_KEY);
-}
-
-export function hasApiKey() {
-  return !!getApiKey();
+export function setProxyUrl(url) {
+  if (url && url !== DEFAULT_PROXY) localStorage.setItem(PROXY_KEY, url);
+  else localStorage.removeItem(PROXY_KEY);
 }
 
 async function apiFetch(endpoint, params = {}) {
-  const key = getApiKey();
-  if (!key) throw new Error("No API-Football key configured");
+  const proxy = getProxyUrl();
+  if (!proxy) throw new Error("No proxy URL configured");
   const qs = new URLSearchParams(params).toString();
-  // Try the direct endpoint first; fall back to RapidAPI host if CORS blocks it
-  const urls = [
-    { url: `${BASE}/${endpoint}${qs ? "?" + qs : ""}`, headers: { "x-apisports-key": key } },
-    { url: `https://api-football-v1.p.rapidapi.com/v3/${endpoint}${qs ? "?" + qs : ""}`, headers: { "x-rapidapi-key": key, "x-rapidapi-host": "api-football-v1.p.rapidapi.com" } },
-  ];
-  let lastErr;
-  for (const { url, headers } of urls) {
-    try {
-      const res = await fetch(url, { method: "GET", headers });
-      if (res.status === 403) throw new Error("Invalid API key or CORS blocked (403). Make sure your key is correct.");
-      if (res.status === 429) throw new Error("Rate limit reached — free tier allows 100 req/day");
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      if (data.errors && Object.keys(data.errors).length > 0) {
-        throw new Error(Object.values(data.errors).join("; "));
-      }
-      return data;
-    } catch (e) {
-      lastErr = e;
-      if (e.message.includes("Rate limit") || e.message.includes("Invalid API")) throw e;
-    }
+  const url = `${proxy}/${endpoint}${qs ? "?" + qs : ""}`;
+  const res = await fetch(url);
+  if (res.status === 429) throw new Error("Rate limit reached — free tier allows 100 req/day");
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}${body ? ": " + body : ""}`);
   }
-  throw new Error(lastErr?.message || "Failed to fetch — CORS may be blocking browser requests. API-Football may require a backend proxy.");
+  const data = await res.json();
+  if (data.errors && Object.keys(data.errors).length > 0) {
+    throw new Error(Object.values(data.errors).join("; "));
+  }
+  return data;
 }
 
 export async function testApiKey() {

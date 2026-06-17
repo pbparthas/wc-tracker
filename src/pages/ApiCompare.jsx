@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
-  getApiKey, setApiKey, hasApiKey, testApiKey,
+  getProxyUrl, setProxyUrl, testApiKey,
   fetchFixtures, fetchLineups, fetchFixtureEvents,
   fetchFixtureStats, fetchPlayerStats, LEAGUES,
 } from "../lib/apifootball.js";
@@ -49,7 +49,7 @@ function CompareRow({ label, espn, apif }) {
 const TODAY = new Date().toISOString().slice(0, 10);
 
 export default function ApiCompare() {
-  const [keyInput, setKeyInput] = useState(getApiKey);
+  const [proxyInput, setProxyInput] = useState(getProxyUrl);
   const [keyStatus, setKeyStatus] = useState(null);
   const [testing, setTesting] = useState(false);
 
@@ -63,20 +63,20 @@ export default function ApiCompare() {
   const [comparison, setComparison] = useState(null);
   const [comparing, setComparing] = useState(false);
 
-  const saveKey = () => {
-    setApiKey(keyInput);
+  const saveProxy = () => {
+    setProxyUrl(proxyInput);
     setKeyStatus({ ok: true, msg: "Saved." });
   };
 
   const doTest = async () => {
-    setApiKey(keyInput);
+    setProxyUrl(proxyInput);
     setTesting(true);
     setKeyStatus(null);
     try {
       const info = await testApiKey();
       setKeyStatus({
         ok: true,
-        msg: `Key works! Plan: ${info.plan} · ${info.remaining}/${info.limitDay} requests remaining today`,
+        msg: `Proxy works! Plan: ${info.plan} · ${info.remaining}/${info.limitDay} requests remaining today`,
       });
     } catch (e) {
       setKeyStatus({ ok: false, msg: e.message });
@@ -162,28 +162,27 @@ export default function ApiCompare() {
         Uses 5 API-Football requests per comparison.
       </p>
 
-      {/* Step 1: API Key */}
-      <Section title="Step 1 — API-Football Key">
+      {/* Step 1: Proxy URL */}
+      <Section title="Step 1 — Proxy connection">
         <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
-          Get a free key (no card) at{" "}
-          <a href="https://www.api-football.com/" target="_blank" rel="noreferrer noopener">
-            api-football.com
-          </a>
+          API-Football calls go through a Cloudflare Worker proxy that holds the API key server-side.
+          The default proxy is pre-configured — just hit "Test connection".
         </p>
         <div className="field">
+          <label style={{ fontSize: 11, color: "var(--muted)" }}>Proxy URL</label>
           <input
             className="input"
-            type="password"
+            type="url"
             autoComplete="off"
-            placeholder="Paste your API-Football key"
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
+            placeholder="https://golazo-api-proxy.YOUR.workers.dev"
+            value={proxyInput}
+            onChange={(e) => setProxyInput(e.target.value)}
           />
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-          <button className="btn accent" onClick={saveKey}>Save</button>
-          <button className="btn" onClick={doTest} disabled={testing || !keyInput}>
-            {testing ? "Testing…" : "Test key"}
+          <button className="btn accent" onClick={saveProxy}>Save</button>
+          <button className="btn" onClick={doTest} disabled={testing || !proxyInput}>
+            {testing ? "Testing…" : "Test connection"}
           </button>
         </div>
         {keyStatus && (
@@ -194,7 +193,7 @@ export default function ApiCompare() {
       </Section>
 
       {/* Step 2: Pick a match */}
-      {hasApiKey() && (
+      {proxyInput && (
         <Section title="Step 2 — Pick a match from API-Football">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
             <select
