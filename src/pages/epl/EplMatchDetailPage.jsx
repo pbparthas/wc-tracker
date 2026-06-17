@@ -62,6 +62,16 @@ export default function EplMatchDetailPage() {
     { grounding: true }
   );
 
+  const upcoming = state === "pre";
+  const tabs = match ? [
+    { id: "overview", label: "Overview" },
+    ...(!upcoming && summary?.events?.length ? [{ id: "timeline", label: "Timeline" }] : []),
+    ...(summary?.lineups ? [{ id: "lineups", label: "Lineups" }] : []),
+    ...(!upcoming && summary?.stats?.length ? [{ id: "stats", label: "Stats" }] : []),
+  ] : [{ id: "overview", label: "Overview" }];
+  const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
+  const swipe = useSwipeTabs(tabs, activeTab, setTab);
+
   if (!match) {
     return (
       <div className="wrap" style={{ paddingTop: 20 }}>
@@ -77,17 +87,7 @@ export default function EplMatchDetailPage() {
   }
 
   const p = istParts(match.kickoff);
-  const upcoming = state === "pre";
   const live = state === "in";
-
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    ...(!upcoming && summary?.events?.length ? [{ id: "timeline", label: "Timeline" }] : []),
-    ...(summary?.lineups ? [{ id: "lineups", label: "Lineups" }] : []),
-    ...(!upcoming && summary?.stats?.length ? [{ id: "stats", label: "Stats" }] : []),
-  ];
-  const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
-  const swipe = useSwipeTabs(tabs, activeTab, setTab);
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }} {...swipe}>
