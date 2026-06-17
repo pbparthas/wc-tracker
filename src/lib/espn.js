@@ -168,7 +168,7 @@ export async function fetchSummary(eventId, league = LEAGUE) {
         else if (lower.includes("penalty") && lower.includes("goal")) kind = "pen";
         else if (lower.includes("goal")) kind = "goal";
         else if (lower.includes("yellow")) kind = "yellow";
-        else if (lower.includes("red")) kind = "red";
+        else if (lower.includes("red card") || lower === "red") kind = "red";
         else if (lower.includes("sub")) kind = "sub";
         return {
           kind,
