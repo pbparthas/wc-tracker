@@ -21,18 +21,29 @@ async function apiFetch(endpoint, params = {}) {
   const key = getApiKey();
   if (!key) throw new Error("No API-Football key configured");
   const qs = new URLSearchParams(params).toString();
-  const url = `${BASE}/${endpoint}${qs ? "?" + qs : ""}`;
-  const res = await fetch(url, {
-    headers: { "x-apisports-key": key },
-  });
-  if (res.status === 403) throw new Error("Invalid API key (403)");
-  if (res.status === 429) throw new Error("Rate limit reached — free tier allows 100 req/day");
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  const data = await res.json();
-  if (data.errors && Object.keys(data.errors).length > 0) {
-    throw new Error(Object.values(data.errors).join("; "));
+  // Try the direct endpoint first; fall back to RapidAPI host if CORS blocks it
+  const urls = [
+    { url: `${BASE}/${endpoint}${qs ? "?" + qs : ""}`, headers: { "x-apisports-key": key } },
+    { url: `https://api-football-v1.p.rapidapi.com/v3/${endpoint}${qs ? "?" + qs : ""}`, headers: { "x-rapidapi-key": key, "x-rapidapi-host": "api-football-v1.p.rapidapi.com" } },
+  ];
+  let lastErr;
+  for (const { url, headers } of urls) {
+    try {
+      const res = await fetch(url, { method: "GET", headers });
+      if (res.status === 403) throw new Error("Invalid API key or CORS blocked (403). Make sure your key is correct.");
+      if (res.status === 429) throw new Error("Rate limit reached — free tier allows 100 req/day");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      if (data.errors && Object.keys(data.errors).length > 0) {
+        throw new Error(Object.values(data.errors).join("; "));
+      }
+      return data;
+    } catch (e) {
+      lastErr = e;
+      if (e.message.includes("Rate limit") || e.message.includes("Invalid API")) throw e;
+    }
   }
-  return data;
+  throw new Error(lastErr?.message || "Failed to fetch — CORS may be blocking browser requests. API-Football may require a backend proxy.");
 }
 
 export async function testApiKey() {
