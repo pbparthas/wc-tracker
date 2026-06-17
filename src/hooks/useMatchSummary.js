@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchSummary } from "../lib/espn.js";
+import { fetchSummary } from "../lib/datasource.js";
 import { cacheGet, cacheSet } from "../lib/storage.js";
 import { useResume } from "./useResume.js";
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchStandings } from "../lib/espn.js";
+import { fetchStandings } from "../lib/datasource.js";
 import { cacheGet, cacheSet } from "../lib/storage.js";
 
 const KEY = "standings";

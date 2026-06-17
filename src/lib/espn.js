@@ -165,7 +165,7 @@ export async function fetchSummary(eventId, league = LEAGUE) {
         const lower = typeText.toLowerCase();
         let kind = "event";
         if (lower.includes("own goal")) kind = "og";
-        else if (lower.includes("penalty") && lower.includes("goal")) kind = "pen";
+        else if (lower.includes("penalty")) kind = lower.includes("missed") || lower.includes("saved") ? "event" : "pen";
         else if (lower.includes("goal")) kind = "goal";
         else if (lower.includes("yellow")) kind = "yellow";
         else if (lower.includes("red card") || lower === "red") kind = "red";

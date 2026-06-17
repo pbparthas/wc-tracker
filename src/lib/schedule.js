@@ -1,7 +1,7 @@
 /* Full 104-match schedule, fetched in 7-day chunks with tiered caching:
    finished chunks are immutable (never refetched), today's chunk refreshes
    every 60s during live play / 15min otherwise, future chunks every 12h. */
-import { fetchScoreboard } from "./espn.js";
+import { fetchScoreboard } from "./datasource.js";
 import { cacheGet, cacheSet } from "./storage.js";
 import { TOURNAMENT } from "../data/phases.js";
 import { TEAMS } from "../data/teams.js";
