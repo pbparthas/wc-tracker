@@ -1,28 +1,45 @@
 /* Unified data source: API-Football (via proxy) when enabled, ESPN as fallback.
-   Transforms API-Football responses to match the ESPN format the app expects. */
+   Transforms API-Football responses to match the ESPN format the app expects.
+   API-Football IDs are prefixed with "af-" to avoid collision with ESPN IDs. */
 import { resolveTeam } from "../data/teams.js";
 import { tableOrder } from "./thirdPlace.js";
+import { clearPrefix } from "./storage.js";
 import * as espn from "./espn.js";
 import * as apif from "./apifootball.js";
 
 const FLAG_KEY = "golazo:useApiFootball";
+const ID_PREFIX = "af-";
 
 export function isApiFootballEnabled() {
   return localStorage.getItem(FLAG_KEY) === "1";
 }
 
 export function setApiFootballEnabled(on) {
+  const was = isApiFootballEnabled();
   if (on) localStorage.setItem(FLAG_KEY, "1");
   else localStorage.removeItem(FLAG_KEY);
+  if (on !== was) {
+    clearPrefix("sched:");
+    clearPrefix("sum:");
+    clearPrefix("standings");
+    allFixturesCache = null;
+  }
+}
+
+function isApifId(id) {
+  return String(id).startsWith(ID_PREFIX);
+}
+
+function stripPrefix(id) {
+  return String(id).replace(ID_PREFIX, "");
 }
 
 /* ── Status map: API-Football short → our state/status ─────────────── */
 
 function mapState(short) {
   if (["TBD", "NS"].includes(short)) return "pre";
-  if (["1H", "2H", "ET", "P", "LIVE", "BT"].includes(short)) return "in";
-  if (["HT"].includes(short)) return "in";
-  return "post"; // FT, AET, PEN, WO, AWD, CANC, ABD, PST, SUSP, INT
+  if (["1H", "2H", "ET", "P", "LIVE", "BT", "HT"].includes(short)) return "in";
+  return "post";
 }
 
 function mapStatus(short, elapsed) {
@@ -50,7 +67,7 @@ function fixtureToMatch(f) {
   if (!stage && home.group && home.group === away.group) stage = "Group " + home.group;
 
   return {
-    id: f.id,
+    id: ID_PREFIX + f.id,
     home,
     away,
     hg: state === "pre" ? null : (f.goals?.home ?? null),
@@ -145,15 +162,44 @@ function mapEventKind(type, detail) {
 }
 
 export async function fetchSummary(eventId, league) {
-  if (!isApiFootballEnabled()) return espn.fetchSummary(eventId, league);
+  if (isApifId(eventId)) {
+    return fetchApifSummary(stripPrefix(eventId));
+  }
+  return espn.fetchSummary(eventId, league);
+}
+
+async function findEspnId(fixture) {
+  try {
+    const date = fixture.date.slice(0, 10).replace(/-/g, "");
+    const matches = await espn.fetchScoreboard(date, date);
+    const homeName = (fixture.home?.name || "").toLowerCase();
+    const awayName = (fixture.away?.name || "").toLowerCase();
+    const found = matches.find((m) => {
+      const mh = (m.home?.name || "").toLowerCase();
+      const ma = (m.away?.name || "").toLowerCase();
+      return (mh.includes(homeName) || homeName.includes(mh))
+          && (ma.includes(awayName) || awayName.includes(ma));
+    });
+    return found?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchApifSummary(fixtureId) {
   try {
     const [fixture, lineups, events, stats, playerStats] = await Promise.all([
-      apif.fetchFixtureDetail(eventId),
-      apif.fetchLineups(eventId).catch(() => []),
-      apif.fetchFixtureEvents(eventId).catch(() => []),
-      apif.fetchFixtureStats(eventId).catch(() => []),
-      apif.fetchPlayerStats(eventId).catch(() => []),
+      apif.fetchFixtureDetail(fixtureId),
+      apif.fetchLineups(fixtureId).catch(() => []),
+      apif.fetchFixtureEvents(fixtureId).catch(() => []),
+      apif.fetchFixtureStats(fixtureId).catch(() => []),
+      apif.fetchPlayerStats(fixtureId).catch(() => []),
     ]);
+
+    // Fetch ESPN commentary in the background (non-blocking)
+    const espnCommentaryPromise = findEspnId(fixture).then((espnId) =>
+      espnId ? espn.fetchSummary(espnId).then((s) => s.commentary).catch(() => null) : null
+    );
 
     const state = mapState(fixture.status);
     const homeTeam = resolveApifTeam(fixture.home);
@@ -163,7 +209,7 @@ export async function fetchSummary(eventId, league) {
 
     const out = {
       match: {
-        id: fixture.id,
+        id: ID_PREFIX + fixture.id,
         home: homeTeam,
         away: awayTeam,
         hg: state === "pre" ? null : (fixture.goals?.home ?? null),
@@ -198,6 +244,7 @@ export async function fetchSummary(eventId, league) {
           text: `${e.minute}' ${e.player}${e.assist ? " (" + e.assist + ")" : ""} — ${e.detail || e.type}`,
         };
       });
+
     }
 
     // Lineups
@@ -235,13 +282,13 @@ export async function fetchSummary(eventId, league) {
         ["Possession %", "Ball Possession"],
         ["Shots", "Total Shots"],
         ["On target", "Shots on Goal"],
+        ["Expected goals", "expected_goals"],
         ["Corners", "Corner Kicks"],
         ["Fouls", "Fouls"],
         ["Saves", "Goalkeeper Saves"],
         ["Offsides", "Offsides"],
         ["Passes", "Total passes"],
         ["Pass accuracy", "Passes %"],
-        ["Expected goals", "expected_goals"],
       ];
       out.stats = STAT_MAP
         .map(([label, apiKey]) => ({
@@ -284,8 +331,11 @@ export async function fetchSummary(eventId, league) {
       referee: fixture.referee || "",
     };
 
+    // Commentary from ESPN (best-effort, non-blocking)
+    out.commentary = await espnCommentaryPromise;
+
     return out;
   } catch {
-    return espn.fetchSummary(eventId, league);
+    return espn.fetchSummary(fixtureId);
   }
 }
