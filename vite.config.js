@@ -7,8 +7,8 @@ import { VitePWA } from "vite-plugin-pwa";
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "connect-src 'self' https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://generativelanguage.googleapis.com https://api.open-meteo.com",
-  "img-src 'self' data: https://a.espncdn.com",
+  "connect-src 'self' https://site.api.espn.com https://site.web.api.espn.com https://sports.core.api.espn.com https://generativelanguage.googleapis.com https://api.open-meteo.com https://golazo-api-proxy.pbparthas.workers.dev",
+  "img-src 'self' data: https://a.espncdn.com https://media.api-sports.io",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
   "object-src 'none'",
