@@ -152,6 +152,16 @@ export default function SettingsPage() {
       </div>
 
       <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+        <div className="eyebrow" style={{ marginBottom: 10 }}>Data source</div>
+        <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 10 }}>
+          Live data comes from ESPN's public feed. Want to compare with API-Football?
+        </p>
+        <Link to="/settings/api-compare" className="btn" style={{ textDecoration: "none" }}>
+          API comparison tool
+        </Link>
+      </div>
+
+      <div className="card" style={{ padding: 16, marginBottom: 12 }}>
         <div className="eyebrow" style={{ marginBottom: 10 }}>Storage</div>
         <button
           className="btn"

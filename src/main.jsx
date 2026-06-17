@@ -23,6 +23,7 @@ const TeamsPage = React.lazy(() => import("./pages/TeamsPage.jsx"));
 const YourTeamsPage = React.lazy(() => import("./pages/YourTeamsPage.jsx"));
 const TeamPage = React.lazy(() => import("./pages/TeamPage.jsx"));
 const SettingsPage = React.lazy(() => import("./pages/SettingsPage.jsx"));
+const ApiCompare = React.lazy(() => import("./pages/ApiCompare.jsx"));
 const TransfersPage = React.lazy(() => import("./pages/epl/TransfersPage.jsx"));
 const EplMatchesPage = React.lazy(() => import("./pages/epl/EplMatchesPage.jsx"));
 const TablePage = React.lazy(() => import("./pages/epl/TablePage.jsx"));
@@ -50,6 +51,7 @@ const router = createHashRouter([
       { path: "yourteams", element: <YourTeamsPage /> },
       { path: "team/:code", element: <TeamPage /> },
       { path: "settings", element: <SettingsPage /> },
+      { path: "settings/api-compare", element: <ApiCompare /> },
       { path: "epl", element: <TransfersPage /> },
       { path: "epl/matches", element: <EplMatchesPage /> },
       { path: "epl/table", element: <TablePage /> },
