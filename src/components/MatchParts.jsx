@@ -250,7 +250,7 @@ function PlayerDot({ player, events, subMinute, picked, onPick, imgErrors, onImg
         boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
       }}>
         {hasPhoto ? (
-          <img src={player.headshot} alt="" width={48} height={48} loading="lazy" style={{ objectFit: "cover" }} crossOrigin="anonymous" onError={() => onImgErr(player.name)} />
+          <img src={player.headshot} alt="" width={48} height={48} loading="lazy" style={{ objectFit: "cover" }} onError={() => onImgErr(player.name)} />
         ) : (
           player.jersey || "?"
         )}

@@ -111,7 +111,7 @@ function playerHeadshot(p) {
   if (p.athlete?.headshot?.href) return p.athlete.headshot.href;
   const id = p.athlete?.id;
   if (!id) return null;
-  return `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${id}.png&w=96&h=70`;
+  return `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png`;
 }
 
 /* Match summary: timeline, lineups, game info. Each section parsed independently. */
@@ -253,15 +253,36 @@ export async function fetchSummary(eventId, league = LEAGUE) {
 
   try {
     const ps = {};
-    for (const team of data.boxscore?.players || []) {
+    const sources = [
+      ...(data.boxscore?.players || []),
+      ...(data.players || []),
+    ];
+    for (const team of sources) {
       for (const cat of team.statistics || []) {
-        const keys = cat.keys || [];
+        const keys = cat.keys || cat.labels || [];
         for (const a of cat.athletes || []) {
           const name = a.athlete?.displayName;
           if (!name) continue;
           const s = {};
-          keys.forEach((k, i) => { s[k] = a.stats?.[i] ?? "0"; });
-          ps[name] = s;
+          const vals = a.stats || a.values || [];
+          keys.forEach((k, i) => { s[k] = vals[i] ?? "0"; });
+          if (a.athlete?.stats) {
+            for (const [k, v] of Object.entries(a.athlete.stats)) s[k] = v;
+          }
+          ps[name] = { ...ps[name], ...s };
+        }
+      }
+      if (team.athletes) {
+        for (const a of team.athletes) {
+          const name = a.athlete?.displayName || a.displayName;
+          if (!name) continue;
+          const s = {};
+          for (const cat of a.categories || a.statistics || []) {
+            const keys = cat.keys || cat.labels || [];
+            const vals = cat.values || cat.stats || [];
+            keys.forEach((k, i) => { s[k] = vals[i] ?? "0"; });
+          }
+          if (Object.keys(s).length) ps[name] = { ...ps[name], ...s };
         }
       }
     }
