@@ -1,18 +1,11 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import BottomTabs from "./components/BottomTabs.jsx";
 import { useOnlineStatus } from "./hooks/useOnlineStatus.js";
 
 export default function App() {
   const online = useOnlineStatus();
-  const [updateFn, setUpdateFn] = useState(null);
   const { pathname } = useLocation();
-
-  useEffect(() => {
-    const onUpdate = (e) => setUpdateFn(() => e.detail);
-    window.addEventListener("wc26:sw-update", onUpdate);
-    return () => window.removeEventListener("wc26:sw-update", onUpdate);
-  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -39,12 +32,6 @@ export default function App() {
         <Outlet />
       </Suspense>
       {pathname !== "/" && <BottomTabs />}
-      {updateFn && (
-        <div className="toast" role="status">
-          <span>New version available</span>
-          <button className="btn accent" onClick={() => updateFn(true)}>Reload</button>
-        </div>
-      )}
     </div>
   );
 }

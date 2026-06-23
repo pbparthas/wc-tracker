@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { generateContent, hasKey } from "../lib/gemini.js";
-import { SYSTEM } from "../lib/prompts.js";
+import { systemInstruction } from "../lib/prompts.js";
 import { cacheGet, cacheSet } from "../lib/storage.js";
 
 /* The one pattern behind every AI feature: cache-first, never auto-fires
@@ -16,7 +16,7 @@ export function useAiContent(cacheKey, buildPrompt, { ttlMs = Infinity, groundin
     setError(null);
     try {
       const prompt = await buildPrompt();
-      const text = await generateContent(prompt, { system: SYSTEM, grounding });
+      const text = await generateContent(prompt, { system: systemInstruction(), grounding });
       const entry = { text, t: Date.now() };
       cacheSet(full, entry, ttlMs);
       setItem(entry);

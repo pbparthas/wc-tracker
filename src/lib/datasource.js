@@ -190,20 +190,28 @@ async function findEspnId(fixture) {
 
 async function fetchApifSummary(fixtureId) {
   try {
-    const [fixture, lineups, events, stats, playerStats] = await Promise.all([
-      apif.fetchFixtureDetail(fixtureId),
+    // Fetch the fixture first so we know its state. For a match that hasn't
+    // kicked off, the timeline / stats / player-stats / commentary endpoints
+    // return nothing — firing them anyway just saturates the request burst and
+    // can starve the parallel predictions/injuries calls, so we skip them.
+    const fixture = await apif.fetchFixtureDetail(fixtureId);
+    const state = mapState(fixture.status);
+    const isPre = state === "pre";
+
+    const [lineups, events, stats, playerStats] = await Promise.all([
       apif.fetchLineups(fixtureId).catch(() => []),
-      apif.fetchFixtureEvents(fixtureId).catch(() => []),
-      apif.fetchFixtureStats(fixtureId).catch(() => []),
-      apif.fetchPlayerStats(fixtureId).catch(() => []),
+      isPre ? [] : apif.fetchFixtureEvents(fixtureId).catch(() => []),
+      isPre ? [] : apif.fetchFixtureStats(fixtureId).catch(() => []),
+      isPre ? [] : apif.fetchPlayerStats(fixtureId).catch(() => []),
     ]);
 
-    // Fetch ESPN commentary in the background (non-blocking)
-    const espnCommentaryPromise = findEspnId(fixture).then((espnId) =>
-      espnId ? espn.fetchSummary(espnId).then((s) => s.commentary).catch(() => null) : null
-    );
+    // Fetch ESPN commentary in the background (non-blocking); none exists pre-match.
+    const espnCommentaryPromise = isPre
+      ? Promise.resolve(null)
+      : findEspnId(fixture).then((espnId) =>
+          espnId ? espn.fetchSummary(espnId).then((s) => s.commentary).catch(() => null) : null
+        );
 
-    const state = mapState(fixture.status);
     const homeTeam = resolveApifTeam(fixture.home);
     const awayTeam = resolveApifTeam(fixture.away);
     homeTeam.logo = homeTeam.logo || fixture.home?.logo || null;

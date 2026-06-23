@@ -36,7 +36,7 @@ export default function TeamPage() {
   // cached scenario text, which is exactly when the maths changes.
   const played = fixtures.filter((m) => m.state === "post").length;
   const road = useAiContent(
-    `road:${code}:${played}`,
+    `road2:${code}:${played}`,
     () => roadPrompt(team, standings, computeThirdPlace(standings), fixtures, assembleBracket(matches)),
     { ttlMs: 6 * 60 * 60 * 1000 }
   );

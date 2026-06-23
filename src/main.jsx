@@ -31,10 +31,23 @@ const ClubsPage = React.lazy(() => import("./pages/epl/ClubsPage.jsx"));
 const ClubPage = React.lazy(() => import("./pages/epl/ClubPage.jsx"));
 const EplMatchDetailPage = React.lazy(() => import("./pages/epl/EplMatchDetailPage.jsx"));
 
-const updateSW = registerSW({
-  onNeedRefresh() {
-    window.dispatchEvent(new CustomEvent("wc26:sw-update", { detail: updateSW }));
+/* autoUpdate: a new deploy installs, skips waiting and reloads the page on its
+   own, so a plain refresh always lands on the latest build. We also re-check
+   for updates hourly so long-lived sessions don't go stale. */
+registerSW({
+  immediate: true,
+  onRegisteredSW(_swUrl, reg) {
+    if (reg) setInterval(() => reg.update(), 60 * 60 * 1000);
   },
+});
+
+/* If a lazy chunk 404s because a deploy rotated the asset hashes mid-session,
+   reload once to pick up the new index + chunk map instead of crashing. */
+window.addEventListener("vite:preloadError", () => {
+  if (!sessionStorage.getItem("wc26:reloadedForChunk")) {
+    sessionStorage.setItem("wc26:reloadedForChunk", "1");
+    window.location.reload();
+  }
 });
 
 const router = createHashRouter([

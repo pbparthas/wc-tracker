@@ -179,6 +179,7 @@ export async function fetchInjuries(fixtureId) {
     player: i.player?.name || "?",
     photo: i.player?.photo || null,
     team: i.team?.name || "",
+    teamId: i.team?.id ?? null,
     teamLogo: i.team?.logo || null,
     type: i.player?.type || "",
     reason: i.player?.reason || "",

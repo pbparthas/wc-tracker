@@ -18,14 +18,27 @@ function utcStamp(d) {
 const esc = (s) =>
   String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 
+/* RFC 5545 content lines fold at 75 OCTETS (not characters). Iterate by code
+   point and measure UTF-8 byte length so multi-byte glyphs (⚽, —, accented
+   names) are never split mid-character and never overflow the octet limit.
+   Continuation lines begin with a single space, which counts toward the 75. */
 function fold(line) {
+  const enc = new TextEncoder();
   const out = [];
-  let rest = line;
-  while (rest.length > 74) {
-    out.push(rest.slice(0, 74));
-    rest = " " + rest.slice(74);
+  let cur = "";
+  let curBytes = 0;
+  for (const ch of line) {
+    const chBytes = enc.encode(ch).length;
+    if (curBytes + chBytes > 75) {
+      out.push(cur);
+      cur = " " + ch;
+      curBytes = 1 + chBytes;
+    } else {
+      cur += ch;
+      curBytes += chBytes;
+    }
   }
-  out.push(rest);
+  out.push(cur);
   return out.join("\r\n");
 }
 

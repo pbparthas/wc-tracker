@@ -1,12 +1,30 @@
 /* Every prompt injects authoritative ESPN facts so the model never has to
    rely on (stale) training data for results. */
-import { istParts } from "./time.js";
+import { istParts, IST } from "./time.js";
 
-export const SYSTEM =
-  'You are a football writer for "Golazo", an India-based FIFA World Cup 2026 tracker. ' +
-  "The match facts provided in each request are authoritative and current — trust them over your training data, " +
-  "and never invent scores, scorers or events. Write 150-250 words, vivid but factual. All kickoff times you mention " +
-  "are already in IST. Use light markdown only: short paragraphs and **bold** for emphasis. No headings, no bullet lists.";
+function istToday() {
+  return new Date().toLocaleDateString("en-IN", {
+    timeZone: IST, weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+}
+
+/* Rebuilt per call so the date anchor is always current. The date is the fix for
+   the model otherwise guessing tense from stale training data — matches before
+   today are played, matches today or later are not. */
+export function systemInstruction() {
+  return (
+    'You are a football writer for "Golazo", an India-based FIFA World Cup 2026 tracker. ' +
+    `Today is ${istToday()} (IST) — treat this as the present moment. Any match dated before today has already been ` +
+    "played; any match dated today or later has NOT been played yet, so write about it in the future tense and never " +
+    "state a score or result for it. " +
+    "The match facts provided in each request are authoritative and current — trust them over your training data, " +
+    "and never invent scores, scorers or events. Write 150-250 words, vivid but factual. All kickoff times you mention " +
+    "are already in IST. Use light markdown only: short paragraphs and **bold** for emphasis. No headings, no bullet lists."
+  );
+}
+
+/* Kept for callers that still import the constant; prefer systemInstruction(). */
+export const SYSTEM = systemInstruction();
 
 const row = (r) => `${r.team.name}: P${r.p} W${r.w} D${r.d} L${r.l} GD${r.gf - r.ga} Pts${r.pts}`;
 
@@ -119,6 +137,18 @@ export function roadPrompt(team, standings, third, fixtures, rounds) {
     g.forEach((r, i) => lines.push(`${i + 1}. ${row(r)}`));
   }
   const left = fixtures.filter((m) => m.state !== "post");
+
+  // Deterministic ceiling so the model never claims a chance that the maths rules out.
+  const myRow = g?.find((r) => r.team.code === team.code);
+  if (myRow) {
+    const remaining = left.length;
+    const maxPts = myRow.pts + remaining * 3;
+    const playedN = myRow.p;
+    lines.push(
+      `Maths anchor (authoritative): ${team.name} have ${myRow.pts} point(s) after ${playedN} game(s) with ` +
+        `${remaining} still to play, so they can finish on at most ${maxPts} point(s).`
+    );
+  }
   if (left.length) {
     lines.push("Their remaining fixtures (authoritative):");
     for (const m of left) {
@@ -140,7 +170,11 @@ export function roadPrompt(team, standings, third, fixtures, rounds) {
     lines.push(...ko);
   }
   lines.push(
-    "Spell out concretely what results they need: best case, worst case, and which other matches matter. " +
+    "State clearly and up front whether they have ALREADY been eliminated, are still alive, or have already qualified — " +
+      "decide this strictly from the maths anchor and the tables above. If even their maximum possible points cannot reach " +
+      "the top two of the group, and they cannot finish among the eight best third-placed teams, say plainly that they are " +
+      "eliminated and do not describe a path that no longer exists. " +
+      "Otherwise spell out concretely what results they need: best case, worst case, and which other matches matter. " +
       "If their group is finished, describe their knockout path and likely opponents instead. " +
       "Be precise with the points math and never invent results that are not listed above."
   );

@@ -30,9 +30,9 @@ export default function MatchDetailPage() {
     ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag }
     : schedMatch || summary?.match || null;
 
-  const preview = useAiContent("preview:" + id, () => previewPrompt(match, standings));
+  const preview = useAiContent("preview2:" + id, () => previewPrompt(match, standings));
   const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
-  const h2h = useAiContent("h2h:" + id, () => h2hPrompt(match, matches), { ttlMs: WEEK });
+  const h2h = useAiContent("h2h2:" + id, () => h2hPrompt(match, matches), { ttlMs: WEEK });
   const wx = useWeather(match?.id, match?.city, match?.kickoff, match?.state);
 
   const upcoming = match?.state === "pre";
@@ -133,7 +133,7 @@ export default function MatchDetailPage() {
         <>
           {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
           {upcoming && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} />}
-          {(upcoming || match.state === "in") && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} />}
+          {(upcoming || match.state === "in") && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} homeId={match.apifHomeId} awayId={match.apifAwayId} />}
           {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
           {!upcoming && <MatchGlance stats={summary?.stats} />}

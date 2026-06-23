@@ -24,13 +24,20 @@ export function useSchedule() {
 
   const anyLive = data.matches.some((m) => m.state === "in");
 
-  const kickoffSoon = data.matches.some(
-    (m) => m.state === "pre" && new Date(m.kickoff).getTime() - Date.now() < 5 * 60 * 1000
-  );
+  // Bounded windows: a pre-match within 5 min of kickoff, or one that should
+  // have started in the last 15 min (ESPN can lag flipping pre → in). Without
+  // the lower bounds a match ESPN leaves stuck on "pre" would poll forever.
+  const kickoffSoon = data.matches.some((m) => {
+    if (m.state !== "pre") return false;
+    const delta = new Date(m.kickoff).getTime() - Date.now();
+    return delta >= 0 && delta < 5 * 60 * 1000;
+  });
 
-  const recentlyStarted = data.matches.some(
-    (m) => m.state === "pre" && new Date(m.kickoff).getTime() < Date.now()
-  );
+  const recentlyStarted = data.matches.some((m) => {
+    if (m.state !== "pre") return false;
+    const delta = new Date(m.kickoff).getTime() - Date.now();
+    return delta < 0 && delta > -15 * 60 * 1000;
+  });
 
   const needsPoll = anyLive || kickoffSoon || recentlyStarted;
 

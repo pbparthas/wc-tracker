@@ -734,13 +734,22 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam }) {
 
 /* ── Injuries & suspensions ──────────────────────────────────────── */
 
-export function InjuriesCard({ injuries, homeTeam, awayTeam }) {
+export function InjuriesCard({ injuries, homeTeam, awayTeam, homeId, awayId }) {
   if (!injuries?.length) return null;
 
   const homeName = homeTeam?.name || "";
   const awayName = awayTeam?.name || "";
-  const homeInj = injuries.filter((i) => i.team === homeName);
-  const awayInj = injuries.filter((i) => i.team === awayName);
+  // Prefer API-Football team IDs — injury team names ("Korea Republic") don't
+  // always match our display names ("South Korea"). Fall back to name match.
+  const sideOf = (i) => {
+    if (homeId != null && i.teamId === homeId) return "home";
+    if (awayId != null && i.teamId === awayId) return "away";
+    if (i.team === homeName) return "home";
+    if (i.team === awayName) return "away";
+    return null;
+  };
+  const homeInj = injuries.filter((i) => sideOf(i) === "home");
+  const awayInj = injuries.filter((i) => sideOf(i) === "away");
   if (!homeInj.length && !awayInj.length) return null;
 
   const InjPlayer = ({ inj }) => (
