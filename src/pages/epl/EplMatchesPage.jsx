@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import MatchRow from "../../components/MatchRow.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchLeagueMatches } from "../../lib/espn.js";
+import { fetchLeagueMatches } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 import { useResume } from "../../hooks/useResume.js";

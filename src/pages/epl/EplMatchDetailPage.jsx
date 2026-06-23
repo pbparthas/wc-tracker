@@ -5,7 +5,7 @@ import StatusPill from "../../components/StatusPill.jsx";
 import AiCard from "../../components/AiCard.jsx";
 import { EventSummary, PitchView, BenchList, CommentaryCard, StatsCard, TimelineCard } from "../../components/MatchParts.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchSummary, fetchLeagueMatches } from "../../lib/espn.js";
+import { fetchLeagueMatches, fetchLeagueSummary } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
 import { useSwipeTabs } from "../../hooks/useSwipeTabs.js";
@@ -34,7 +34,7 @@ export default function EplMatchDetailPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const s = await fetchSummary(id, EPL.slug);
+      const s = await fetchLeagueSummary(id, EPL.slug);
       setSummary(s);
       if (state === "post") cacheSet("sum:epl:" + id, s);
       else cacheSet("sum:epl:" + id, s, 5 * 60 * 1000);
@@ -65,9 +65,9 @@ export default function EplMatchDetailPage() {
   const upcoming = state === "pre";
   const tabs = match ? [
     { id: "overview", label: "Overview" },
-    ...(!upcoming && summary?.events?.length ? [{ id: "timeline", label: "Timeline" }] : []),
-    ...(summary?.lineups ? [{ id: "lineups", label: "Lineups" }] : []),
-    ...(!upcoming && summary?.stats?.length ? [{ id: "stats", label: "Stats" }] : []),
+    ...(!upcoming ? [{ id: "timeline", label: "Timeline" }] : []),
+    { id: "lineups", label: "Lineups" },
+    ...(!upcoming ? [{ id: "stats", label: "Stats" }] : []),
   ] : [{ id: "overview", label: "Overview" }];
   const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
   const swipe = useSwipeTabs(tabs, activeTab, setTab);
@@ -154,30 +154,49 @@ export default function EplMatchDetailPage() {
             </div>
           )}
 
-          {upcoming && !loading && !summary?.lineups && (
-            <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
-              <div className="eyebrow" style={{ marginBottom: 4 }}>Starting XI</div>
-              Team sheets usually drop about an hour before kickoff — they'll appear here automatically.
-            </div>
-          )}
         </>
       )}
 
       {activeTab === "timeline" && (
-        <>
-          <TimelineCard events={summary?.events} />
-          {summary?.commentary?.length > 0 && <CommentaryCard items={summary.commentary} />}
-        </>
+        loading && !summary?.events ? (
+          <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading timeline…</p>
+        ) : summary?.events?.length ? (
+          <>
+            <TimelineCard events={summary.events} />
+            {summary?.commentary?.length > 0 && <CommentaryCard items={summary.commentary} />}
+          </>
+        ) : (
+          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Timeline not available yet.</p>
+        )
       )}
 
-      {activeTab === "lineups" && summary?.lineups && (
-        <>
-          <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} match={match} />
-          <BenchList home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
-        </>
+      {activeTab === "lineups" && (
+        loading && !summary?.lineups ? (
+          <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading lineups…</p>
+        ) : summary?.lineups ? (
+          <>
+            <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} match={match} />
+            <BenchList home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
+          </>
+        ) : upcoming ? (
+          <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
+            <div className="eyebrow" style={{ marginBottom: 4 }}>Starting XI</div>
+            Team sheets usually drop about an hour before kickoff — they'll appear here automatically.
+          </div>
+        ) : (
+          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Lineups not available for this match.</p>
+        )
       )}
 
-      {activeTab === "stats" && <StatsCard stats={summary?.stats} />}
+      {activeTab === "stats" && (
+        loading && !summary?.stats ? (
+          <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading stats…</p>
+        ) : summary?.stats?.length ? (
+          <StatsCard stats={summary.stats} />
+        ) : (
+          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Match stats not available yet.</p>
+        )
+      )}
 
       {loading && !summary && (
         <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading match details…</p>

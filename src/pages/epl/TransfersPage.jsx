@@ -73,20 +73,20 @@ export default function TransfersPage() {
     .filter(Boolean);
 
   const digest = useAiContent(
-    "transferDigest2:epl:" + istDateKey(),
-    () => transferDigestPrompt(EPL.name, favNames),
+    "transferDigest3:epl:" + istDateKey(),
+    () => transferDigestPrompt(EPL.name),
     { ttlMs: 6 * HOUR, grounding: true }
   );
 
   const rumors = useAiContent(
-    "transferRumors:epl:" + istDateKey(),
-    () => rumorMillPrompt(EPL.name, favNames),
+    "transferRumors2:epl:" + istDateKey(),
+    () => rumorMillPrompt(EPL.name),
     { ttlMs: 6 * HOUR, grounding: true }
   );
 
   const movesAi = useAiContent(
-    "transferMoves:epl:" + istDateKey(),
-    () => confirmedMovesPrompt(EPL.name, favNames),
+    "transferMoves2:epl:" + istDateKey(),
+    () => confirmedMovesPrompt(EPL.name),
     { ttlMs: 6 * HOUR, grounding: true }
   );
 

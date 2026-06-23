@@ -1,6 +1,6 @@
 import React from "react";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchLeagueTable } from "../../lib/espn.js";
+import { fetchLeagueTable } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 
 const EPL = COMPETITIONS.epl;

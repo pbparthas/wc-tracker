@@ -393,3 +393,64 @@ export async function fetchTopScorers() {
     })),
   };
 }
+
+/* ── League-mode helpers (EPL etc.) ──────────────────────────────── */
+
+const APIF_LEAGUE_MAP = { "soccer/eng.1": { id: 39, season: 2026 } };
+
+function apifLeagueFor(espnSlug) {
+  return isApiFootballEnabled() ? APIF_LEAGUE_MAP[espnSlug] || null : null;
+}
+
+let leagueFixturesCache = {};
+let leagueFixturesFetchedAt = {};
+const LEAGUE_FIXTURES_TTL = 5 * 60 * 1000;
+
+export async function fetchLeagueMatches(espnSlug, opts = {}) {
+  const al = apifLeagueFor(espnSlug);
+  if (!al) return espn.fetchLeagueMatches(espnSlug, opts);
+  try {
+    const now = Date.now();
+    const cacheKey = `${al.id}:${al.season}`;
+    if (
+      leagueFixturesCache[cacheKey] &&
+      !opts.bust &&
+      now - (leagueFixturesFetchedAt[cacheKey] || 0) < LEAGUE_FIXTURES_TTL
+    ) {
+      return leagueFixturesCache[cacheKey];
+    }
+    const fixtures = await apif.fetchFixtures(al.id, { season: al.season });
+    const matches = fixtures.map(fixtureToMatch);
+    leagueFixturesCache[cacheKey] = matches;
+    leagueFixturesFetchedAt[cacheKey] = now;
+    return matches;
+  } catch {
+    return espn.fetchLeagueMatches(espnSlug, opts);
+  }
+}
+
+export async function fetchLeagueSummary(eventId, espnSlug) {
+  if (isApifId(eventId)) {
+    return fetchApifSummary(stripPrefix(eventId));
+  }
+  return espn.fetchSummary(eventId, espnSlug);
+}
+
+export async function fetchLeagueTable(espnSlug) {
+  const al = apifLeagueFor(espnSlug);
+  if (!al) return espn.fetchLeagueTable(espnSlug);
+  try {
+    const rows = await apif.fetchLeagueTable(al.id, al.season);
+    if (!rows.length) throw new Error("empty table");
+    return {
+      rows: rows.map((r) => ({
+        team: { code: null, espnId: null, name: r.team.name, flag: "", logo: r.team.logo },
+        p: r.p, w: r.w, d: r.d, l: r.l,
+        gf: r.gf, ga: r.ga, pts: r.pts,
+      })),
+      season: String(al.season),
+    };
+  } catch {
+    return espn.fetchLeagueTable(espnSlug);
+  }
+}

@@ -133,6 +133,28 @@ export async function fetchPlayerStats(fixtureId) {
   }));
 }
 
+export async function fetchLeagueTable(leagueId, season) {
+  const data = await apiFetch("standings", { league: leagueId, season });
+  const groups = data.response?.[0]?.league?.standings || [];
+  const entries = groups.flat();
+  return entries.map((e) => ({
+    team: {
+      name: e.team?.name || "?",
+      logo: e.team?.logo || null,
+      id: e.team?.id || null,
+    },
+    rank: e.rank || 0,
+    p: e.all?.played ?? 0,
+    w: e.all?.win ?? 0,
+    d: e.all?.draw ?? 0,
+    l: e.all?.lose ?? 0,
+    gf: e.all?.goals?.for ?? 0,
+    ga: e.all?.goals?.against ?? 0,
+    pts: e.points ?? 0,
+    form: e.form || "",
+  }));
+}
+
 export async function fetchStandings(leagueId, season) {
   const data = await apiFetch("standings", { league: leagueId, season });
   return data.response?.[0]?.league?.standings || [];
