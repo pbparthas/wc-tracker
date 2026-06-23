@@ -8,7 +8,7 @@ import PlayerSheet from "../components/PlayerSheet.jsx";
 import SquadList from "../components/SquadList.jsx";
 import { TEAMS, GROUPS } from "../data/teams.js";
 import { espnTeamId } from "../lib/espn.js";
-import { computeThirdPlace, tableOrder } from "../lib/thirdPlace.js";
+import { computeThirdPlace } from "../lib/thirdPlace.js";
 import { assembleBracket } from "../lib/bracket.js";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
@@ -21,7 +21,7 @@ const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 export default function TeamPage() {
   const { code } = useParams();
-  const team = TEAMS[code] ? { code, ...TEAMS[code] } : null;
+  const team = useMemo(() => TEAMS[code] ? { code, ...TEAMS[code] } : null, [code]);
   const { matches } = useSchedule();
   const { standings } = useStandings();
   const { favs } = useFavorites();

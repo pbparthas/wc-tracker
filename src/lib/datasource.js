@@ -377,7 +377,7 @@ export async function fetchTopScorers() {
     try {
       const rows = await apif.fetchTopScorers(apif.LEAGUES.worldcup, 2026);
       if (rows.length) return { source: "apif", goals: rows };
-    } catch {}
+    } catch { /* fallback to ESPN */ }
   }
   const s = await espn.fetchScorers();
   return {

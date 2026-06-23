@@ -643,7 +643,7 @@ export function TopPerformers({ lineups, playerStats }) {
 
 const GLANCE_LABELS = ["Possession %", "Shots", "On target", "Expected goals"];
 
-export function MatchGlance({ stats, match }) {
+export function MatchGlance({ stats }) {
   if (!stats?.length) return null;
   const rows = stats.filter((s) => GLANCE_LABELS.includes(s.label));
   if (!rows.length) return null;
@@ -676,7 +676,7 @@ export function MatchGlance({ stats, match }) {
 
 export function PredictionsCard({ predictions, homeTeam, awayTeam }) {
   if (!predictions) return null;
-  const { percent, winner, advice, homeForm, awayForm } = predictions;
+  const { percent, advice, homeForm, awayForm } = predictions;
   const homeW = parseInt(percent?.home) || 0;
   const draw = parseInt(percent?.draw) || 0;
   const awayW = parseInt(percent?.away) || 0;

@@ -135,7 +135,7 @@ export default function MatchDetailPage() {
           {(upcoming || match.state === "in") && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} />}
           {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
-          {!upcoming && <MatchGlance stats={summary?.stats} match={match} />}
+          {!upcoming && <MatchGlance stats={summary?.stats} />}
           {!upcoming && <TopPerformers lineups={summary?.lineups} playerStats={summary?.playerStats} />}
 
           {match.state !== "post" && <AiCard title="Head-to-head & form" ai={h2h} cta="✨ H2H & form" />}
