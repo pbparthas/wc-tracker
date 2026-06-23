@@ -174,24 +174,34 @@ function TeamHeader({ side, position }) {
   const isTop = position === "top";
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 10,
-      padding: "10px 14px",
       background: "rgba(0,0,0,0.35)",
       borderRadius: isTop ? "12px 12px 0 0" : "0 0 12px 12px",
+      padding: "10px 14px",
     }}>
-      {side.team?.logo && (
-        <img src={side.team.logo} alt="" width={22} height={22} style={{ borderRadius: 2, objectFit: "contain", flexShrink: 0 }} />
-      )}
-      <span style={{ fontWeight: 700, fontSize: 14, color: "#fff", flex: 1 }}>
-        {side.team?.name || "Team"}
-      </span>
-      {side.formation && (
-        <span style={{
-          background: "#2e7d32", color: "#fff", fontSize: 12, fontWeight: 700,
-          padding: "3px 10px", borderRadius: 12, letterSpacing: "0.03em",
-        }}>
-          {side.formation}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {side.team?.logo && (
+          <img src={side.team.logo} alt="" width={22} height={22} style={{ borderRadius: 2, objectFit: "contain", flexShrink: 0 }} />
+        )}
+        <span style={{ fontWeight: 700, fontSize: 14, color: "#fff", flex: 1 }}>
+          {side.team?.name || "Team"}
         </span>
+        {side.formation && (
+          <span style={{
+            background: "#2e7d32", color: "#fff", fontSize: 12, fontWeight: 700,
+            padding: "3px 10px", borderRadius: 12, letterSpacing: "0.03em",
+          }}>
+            {side.formation}
+          </span>
+        )}
+      </div>
+      {side.coach && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, paddingLeft: 32 }}>
+          {side.coachPhoto && (
+            <img src={side.coachPhoto} alt="" width={20} height={20} loading="lazy"
+              style={{ borderRadius: "50%", objectFit: "cover", background: "#333", flexShrink: 0 }} />
+          )}
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>Coach: {side.coach}</span>
+        </div>
       )}
     </div>
   );
@@ -658,6 +668,116 @@ export function MatchGlance({ stats, match }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ── Win probability + form (API-Football predictions) ───────────── */
+
+export function PredictionsCard({ predictions, homeTeam, awayTeam }) {
+  if (!predictions) return null;
+  const { percent, winner, advice, homeForm, awayForm } = predictions;
+  const homeW = parseInt(percent?.home) || 0;
+  const draw = parseInt(percent?.draw) || 0;
+  const awayW = parseInt(percent?.away) || 0;
+  const total = homeW + draw + awayW || 100;
+
+  const FormDots = ({ form }) => {
+    if (!form) return null;
+    return (
+      <span style={{ letterSpacing: 2, fontSize: 13, fontWeight: 700 }}>
+        {form.slice(-5).split("").map((c, i) => (
+          <span key={i} style={{ color: c === "W" ? "#4caf50" : c === "L" ? "#d32f2f" : "#b58a1e" }}>{c}</span>
+        ))}
+      </span>
+    );
+  };
+
+  return (
+    <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+      <div className="eyebrow" style={{ marginBottom: 8 }}>🎯 Win probability</div>
+
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", fontSize: 13, marginBottom: 4 }}>
+          <b style={{ textAlign: "left", color: homeW >= awayW ? "var(--chalk)" : "var(--muted)" }}>{homeTeam?.name || "Home"}</b>
+          <span style={{ color: "var(--muted)", fontSize: 11, padding: "0 8px", alignSelf: "center" }}>Draw</span>
+          <b style={{ textAlign: "right", color: awayW > homeW ? "var(--chalk)" : "var(--muted)" }}>{awayTeam?.name || "Away"}</b>
+        </div>
+        <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", gap: 2 }}>
+          <div style={{ width: `${(homeW / total) * 100}%`, background: "#2e7d32" }} />
+          <div style={{ width: `${(draw / total) * 100}%`, background: "var(--muted)" }} />
+          <div style={{ width: `${(awayW / total) * 100}%`, background: "#1565c0" }} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", fontSize: 12, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
+          <span style={{ color: homeW >= awayW ? "var(--chalk)" : "var(--muted)" }}>{percent?.home}</span>
+          <span style={{ color: "var(--muted)", textAlign: "center" }}>{percent?.draw}</span>
+          <span style={{ textAlign: "right", color: awayW > homeW ? "var(--chalk)" : "var(--muted)" }}>{percent?.away}</span>
+        </div>
+      </div>
+
+      {(homeForm || awayForm) && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", borderTop: "1px solid var(--line)", padding: "8px 0", gap: "0 8px" }}>
+          <div><FormDots form={homeForm} /></div>
+          <span style={{ fontSize: 11, color: "var(--muted)", alignSelf: "center", textAlign: "center" }}>Last 5</span>
+          <div style={{ textAlign: "right" }}><FormDots form={awayForm} /></div>
+        </div>
+      )}
+
+      {advice && (
+        <div style={{ borderTop: "1px solid var(--line)", paddingTop: 8, fontSize: 13 }}>
+          <span style={{ color: "var(--muted)" }}>Tip: </span>{advice}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Injuries & suspensions ──────────────────────────────────────── */
+
+export function InjuriesCard({ injuries, homeTeam, awayTeam }) {
+  if (!injuries?.length) return null;
+
+  const homeName = homeTeam?.name || "";
+  const awayName = awayTeam?.name || "";
+  const homeInj = injuries.filter((i) => i.team === homeName);
+  const awayInj = injuries.filter((i) => i.team === awayName);
+  if (!homeInj.length && !awayInj.length) return null;
+
+  const InjPlayer = ({ inj }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: "1px solid var(--line)" }}>
+      {inj.photo ? (
+        <img src={inj.photo} alt="" width={26} height={26} loading="lazy"
+          style={{ borderRadius: "50%", objectFit: "cover", background: "#222", flexShrink: 0 }} />
+      ) : (
+        <div style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--pitch)", flexShrink: 0 }} />
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inj.player}</div>
+        {inj.reason && <div style={{ fontSize: 11, color: "var(--muted)" }}>{inj.reason}</div>}
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 700, flexShrink: 0, color: inj.type === "Questionable" ? "#b58a1e" : "#d32f2f" }}>
+        {inj.type === "Questionable" ? "?" : "OUT"}
+      </span>
+    </div>
+  );
+
+  return (
+    <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+      <div className="eyebrow" style={{ marginBottom: 4 }}>🏥 Injuries & suspensions</div>
+      <div style={{ display: "grid", gridTemplateColumns: homeInj.length && awayInj.length ? "1fr 1fr" : "1fr", gap: "0 16px" }}>
+        {homeInj.length > 0 && (
+          <div>
+            {homeName && <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, padding: "4px 0" }}>{homeName}</div>}
+            {homeInj.map((inj, i) => <InjPlayer key={i} inj={inj} />)}
+          </div>
+        )}
+        {awayInj.length > 0 && (
+          <div>
+            {awayName && <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, padding: "4px 0" }}>{awayName}</div>}
+            {awayInj.map((inj, i) => <InjPlayer key={i} inj={inj} />)}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import MatchRow from "../components/MatchRow.jsx";
 import GroupTable from "../components/GroupTable.jsx";
@@ -8,7 +8,7 @@ import PlayerSheet from "../components/PlayerSheet.jsx";
 import SquadList from "../components/SquadList.jsx";
 import { TEAMS, GROUPS } from "../data/teams.js";
 import { espnTeamId } from "../lib/espn.js";
-import { computeThirdPlace } from "../lib/thirdPlace.js";
+import { computeThirdPlace, tableOrder } from "../lib/thirdPlace.js";
 import { assembleBracket } from "../lib/bracket.js";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
@@ -41,6 +41,29 @@ export default function TeamPage() {
     { ttlMs: 6 * 60 * 60 * 1000 }
   );
 
+  const isOut = useMemo(() => {
+    if (!team || !standings) return false;
+    // Knockout: lost any completed KO match
+    const koLost = matches.some((m) => {
+      if (m.state !== "post") return false;
+      if (m.home.code !== code && m.away.code !== code) return false;
+      const koRound = /round of 32|round of 16|quarter|semi|final/i.test(m.stage || "");
+      if (!koRound) return false;
+      return m.home.code === code ? m.hg < m.ag : m.ag < m.hg;
+    });
+    if (koLost) return true;
+    // Group stage: finished bottom or 3rd and not in top-8 third
+    const groupRows = standings[team.group] || [];
+    const allDone = groupRows.length >= 4 && groupRows.every((r) => r.p >= 3);
+    if (!allDone) return false;
+    const pos = groupRows.findIndex((r) => r.team.code === code);
+    if (pos < 2) return false;
+    if (pos === 3) return true;
+    const third = computeThirdPlace(standings);
+    const entry = third.find((r) => r.team.code === code);
+    return entry ? !entry.qualified : false;
+  }, [code, team, standings, matches]);
+
   if (!team) {
     return (
       <div className="wrap" style={{ paddingTop: 20 }}>
@@ -57,17 +80,22 @@ export default function TeamPage() {
     <div className="wrap" style={{ paddingTop: 14 }}>
       <Link to="/teams" style={{ fontSize: 13, textDecoration: "none" }}>← All teams</Link>
 
-      <div className="card" style={{ padding: 16, margin: "10px 0" }}>
+      <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: isOut ? "var(--live)" : undefined }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={{ fontSize: 40, lineHeight: 1 }}>{team.flag}</div>
-            <div className="disp" style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 2px" }}>
+            <div style={{ fontSize: 40, lineHeight: 1, filter: isOut ? "grayscale(0.7)" : undefined }}>{team.flag}</div>
+            <div className="disp" style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 2px", color: isOut ? "var(--muted)" : undefined }}>
               {team.name.toUpperCase()}
             </div>
             <div className="eyebrow">Group {team.group}</div>
           </div>
           <FavoriteStar code={code} />
         </div>
+        {isOut && (
+          <div style={{ display: "inline-block", background: "var(--live)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12, marginTop: 8, letterSpacing: "0.05em" }}>
+            ELIMINATED
+          </div>
+        )}
         <p style={{ fontSize: 14, marginTop: 10 }}>{team.trivia}</p>
         {favs.includes(code) && (
           <p style={{ fontSize: 11, color: "var(--saffron)", marginTop: 8 }}>

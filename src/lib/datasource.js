@@ -78,6 +78,8 @@ function fixtureToMatch(f) {
     city: f.city || "",
     venue: f.venue || "",
     stage,
+    apifHomeId: f.home?.id || null,
+    apifAwayId: f.away?.id || null,
   };
 }
 
@@ -220,6 +222,8 @@ async function fetchApifSummary(fixtureId) {
         city: fixture.city || "",
         venue: fixture.venue || "",
         stage: fixture.league?.round || "",
+        apifHomeId: fixture.home?.id || null,
+        apifAwayId: fixture.away?.id || null,
       },
       events: null,
       lineups: null,
@@ -252,11 +256,14 @@ async function fetchApifSummary(fixtureId) {
       const mapSide = (lu, team) => ({
         team,
         formation: lu.formation || "",
+        coach: lu.coach || "",
+        coachPhoto: lu.coachPhoto || null,
         starters: lu.starters.map((p) => ({
           name: p.name,
           pos: p.pos || "",
           jersey: String(p.number || ""),
           headshot: p.photo || null,
+          apifId: p.id || null,
         })),
         subs: lu.subs.map((p) => ({
           name: p.name,
@@ -264,6 +271,7 @@ async function fetchApifSummary(fixtureId) {
           jersey: String(p.number || ""),
           headshot: p.photo || null,
           subMinute: "",
+          apifId: p.id || null,
         })),
       });
       const homeLu = lineups.find((l) => l.teamName === fixture.home?.name) || lineups[0];
@@ -338,4 +346,50 @@ async function fetchApifSummary(fixtureId) {
   } catch {
     return espn.fetchSummary(fixtureId);
   }
+}
+
+/* ── Predictions (API-Football only) ─────────────────────────────── */
+
+export async function fetchPredictions(matchId) {
+  if (!isApiFootballEnabled() || !isApifId(matchId)) return null;
+  try {
+    return await apif.fetchPredictions(stripPrefix(matchId));
+  } catch {
+    return null;
+  }
+}
+
+/* ── Injuries (API-Football only) ────────────────────────────────── */
+
+export async function fetchInjuries(matchId) {
+  if (!isApiFootballEnabled() || !isApifId(matchId)) return null;
+  try {
+    return await apif.fetchInjuries(stripPrefix(matchId));
+  } catch {
+    return null;
+  }
+}
+
+/* ── Top scorers (API-Football preferred, ESPN fallback) ─────────── */
+
+export async function fetchTopScorers() {
+  if (isApiFootballEnabled()) {
+    try {
+      const rows = await apif.fetchTopScorers(apif.LEAGUES.worldcup, 2026);
+      if (rows.length) return { source: "apif", goals: rows };
+    } catch {}
+  }
+  const s = await espn.fetchScorers();
+  return {
+    source: "espn",
+    goals: s.goals.map((g, i) => ({
+      rank: i + 1,
+      player: g.player,
+      photo: null,
+      team: g.team?.name || "",
+      teamLogo: g.team?.logo || null,
+      goals: g.value,
+      assists: 0,
+    })),
+  };
 }

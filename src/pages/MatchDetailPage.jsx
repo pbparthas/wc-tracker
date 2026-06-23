@@ -3,12 +3,14 @@ import { useParams, Link } from "react-router-dom";
 import Flag from "../components/Flag.jsx";
 import StatusPill from "../components/StatusPill.jsx";
 import AiCard from "../components/AiCard.jsx";
-import { EventSummary, PitchView, BenchList, CommentaryCard, StatsCard, TimelineCard, TopPerformers, MatchGlance } from "../components/MatchParts.jsx";
+import { EventSummary, PitchView, BenchList, CommentaryCard, StatsCard, TimelineCard, TopPerformers, MatchGlance, PredictionsCard, InjuriesCard } from "../components/MatchParts.jsx";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
 import { useMatchSummary } from "../hooks/useMatchSummary.js";
 import { useAiContent } from "../hooks/useAiContent.js";
 import { useSwipeTabs } from "../hooks/useSwipeTabs.js";
+import { usePredictions } from "../hooks/usePredictions.js";
+import { useInjuries } from "../hooks/useInjuries.js";
 import { istParts } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
 import { stadiumFor } from "../data/stadiums.js";
@@ -32,6 +34,8 @@ export default function MatchDetailPage() {
   const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
   const h2h = useAiContent("h2h:" + id, () => h2hPrompt(match, matches), { ttlMs: WEEK });
   const wx = useWeather(match?.id, match?.city, match?.kickoff, match?.state);
+  const { predictions } = usePredictions(upcoming ? match?.id : null);
+  const { injuries } = useInjuries(upcoming || match?.state === "in" ? match?.id : null);
 
   const upcoming = match?.state === "pre";
   const tabs = match ? [
@@ -127,6 +131,8 @@ export default function MatchDetailPage() {
       {activeTab === "overview" && (
         <>
           {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
+          {upcoming && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} />}
+          {(upcoming || match.state === "in") && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} />}
           {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
           {!upcoming && <MatchGlance stats={summary?.stats} match={match} />}

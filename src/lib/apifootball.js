@@ -138,6 +138,46 @@ export async function fetchStandings(leagueId, season) {
   return data.response?.[0]?.league?.standings || [];
 }
 
+export async function fetchPredictions(fixtureId) {
+  const data = await apiFetch("predictions", { fixture: fixtureId });
+  const pred = data.response?.[0];
+  if (!pred) return null;
+  return {
+    percent: pred.predictions?.percent || {},
+    winner: pred.predictions?.winner?.name || null,
+    advice: pred.predictions?.advice || null,
+    homeForm: pred.teams?.home?.last_5?.form || null,
+    awayForm: pred.teams?.away?.last_5?.form || null,
+  };
+}
+
+export async function fetchInjuries(fixtureId) {
+  const data = await apiFetch("injuries", { fixture: fixtureId });
+  return (data.response || []).map((i) => ({
+    player: i.player?.name || "?",
+    photo: i.player?.photo || null,
+    team: i.team?.name || "",
+    teamLogo: i.team?.logo || null,
+    type: i.player?.type || "",
+    reason: i.player?.reason || "",
+  }));
+}
+
+export async function fetchTopScorers(leagueId, season) {
+  const data = await apiFetch("players/topscorers", { league: leagueId, season });
+  return (data.response || []).map((e, i) => ({
+    rank: i + 1,
+    player: e.player?.name || "?",
+    photo: e.player?.photo || null,
+    nationality: e.player?.nationality || "",
+    goals: e.statistics?.[0]?.goals?.total || 0,
+    assists: e.statistics?.[0]?.goals?.assists || 0,
+    team: e.statistics?.[0]?.team?.name || "",
+    teamLogo: e.statistics?.[0]?.team?.logo || null,
+    rating: e.statistics?.[0]?.games?.rating || null,
+  }));
+}
+
 function normalizeFixture(f) {
   return {
     id: String(f.fixture?.id || ""),
