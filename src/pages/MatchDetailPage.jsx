@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import Flag from "../components/Flag.jsx";
 import StatusPill from "../components/StatusPill.jsx";
 import AiCard from "../components/AiCard.jsx";
-import { EventSummary, PitchView, BenchList, CommentaryCard, StatsCard, TimelineCard } from "../components/MatchParts.jsx";
+import { EventSummary, PitchView, BenchList, CommentaryCard, StatsCard, TimelineCard, TopPerformers, MatchGlance } from "../components/MatchParts.jsx";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
 import { useMatchSummary } from "../hooks/useMatchSummary.js";
@@ -128,6 +128,10 @@ export default function MatchDetailPage() {
         <>
           {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
           {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
+
+          {!upcoming && <MatchGlance stats={summary?.stats} match={match} />}
+          {!upcoming && <TopPerformers lineups={summary?.lineups} playerStats={summary?.playerStats} />}
+
           {match.state !== "post" && <AiCard title="Head-to-head & form" ai={h2h} cta="✨ H2H & form" />}
 
           {(() => {

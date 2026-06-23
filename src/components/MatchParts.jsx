@@ -73,6 +73,7 @@ function findStat(stats, ...keys) {
 function PlayerInfo({ player, events, subMinute, playerStats, match, onClose }) {
   const evs = events.filter((e) => e.kind !== "event");
   const stats = playerStats?.[player.name] || {};
+  const rating = stats.rating != null ? parseFloat(stats.rating) : null;
   const statRows = [
     subMinute ? ["Substitution time", null, subMinute] : null,
     ["Minutes played", findStat(stats, "minutesPlayed", "MIN", "minutes")],
@@ -105,6 +106,18 @@ function PlayerInfo({ player, events, subMinute, playerStats, match, onClose }) 
             {player.jersey ? `#${player.jersey}` : ""}{player.pos ? ` · ${player.pos}` : ""}
           </div>
         </div>
+        {rating != null && !Number.isNaN(rating) && (
+          <div style={{ textAlign: "center", flexShrink: 0, marginRight: 4 }}>
+            <div style={{
+              background: ratingColor(rating), borderRadius: 8,
+              minWidth: 42, padding: "6px 8px", fontSize: 18, fontWeight: 800, color: "#fff",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+            }}>
+              {rating.toFixed(1)}
+            </div>
+            <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 3, letterSpacing: "0.04em" }}>RATING</div>
+          </div>
+        )}
         <button style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 22, cursor: "pointer", padding: 6, lineHeight: 1 }} onClick={onClose} aria-label="Close">✕</button>
       </div>
 
@@ -186,13 +199,23 @@ function TeamHeader({ side, position }) {
 
 /* ── Single player dot on the pitch ───────────────────────────────── */
 
-function PlayerDot({ player, events, subMinute, picked, onPick, imgErrors, onImgErr }) {
+function ratingColor(r) {
+  const n = parseFloat(r);
+  if (Number.isNaN(n)) return "#555";
+  if (n >= 8) return "#1f8f3a";   // green
+  if (n >= 7) return "#3a7d2e";   // olive-green
+  if (n >= 6) return "#b58a1e";   // amber
+  return "#b5421e";               // red-ish
+}
+
+function PlayerDot({ player, events, subMinute, rating, picked, onPick, imgErrors, onImgErr }) {
   const hasPhoto = player.headshot && !imgErrors.has(player.name);
   const pEvs = playerMatchEvents(player, events);
   const goalCount = pEvs.filter((e) => ["goal", "pen"].includes(e.kind)).length;
   const hasYellow = pEvs.some((e) => e.kind === "yellow");
   const hasRed = pEvs.some((e) => e.kind === "red");
   const isSelected = picked?.name === player.name;
+  const ratingNum = rating != null ? parseFloat(rating) : null;
 
   return (
     <div
@@ -236,6 +259,19 @@ function PlayerDot({ player, events, subMinute, picked, onPick, imgErrors, onImg
           boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
         }}>
           {"⚽"}{goalCount > 1 && <span style={{ fontSize: 9, fontWeight: 700, color: "#fff" }}>{goalCount}</span>}
+        </div>
+      )}
+      {/* Rating badge (API-Football match rating) */}
+      {ratingNum != null && !Number.isNaN(ratingNum) && (
+        <div style={{
+          position: "absolute", bottom: 16, left: -2, zIndex: 3,
+          background: ratingColor(ratingNum), borderRadius: 5,
+          minWidth: 22, padding: "1px 3px", fontSize: 10, fontWeight: 800,
+          color: "#fff", textAlign: "center",
+          border: "1px solid rgba(255,255,255,0.4)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+        }}>
+          {ratingNum.toFixed(1)}
         </div>
       )}
 
@@ -332,6 +368,7 @@ export function PitchView({ home, away, events, playerStats, match }) {
           player={p}
           events={events}
           subMinute={subMap.get(p.name)}
+          rating={playerStats?.[p.name]?.rating}
           picked={picked}
           onPick={setPicked}
           imgErrors={imgErrors}
@@ -520,6 +557,103 @@ export function StatsCard({ stats }) {
             <div style={{ display: "flex", height: 4, gap: 2, borderRadius: 2 }}>
               <div style={{ width: `${hp}%`, background: hv >= av ? "var(--saffron)" : "var(--line)", borderRadius: 2 }} />
               <div style={{ width: `${ap}%`, background: av > hv ? "var(--saffron)" : "var(--line)", borderRadius: 2 }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Top performers (man of the match) — needs API-Football ratings ── */
+
+export function TopPerformers({ lineups, playerStats }) {
+  if (!lineups || !playerStats) return null;
+
+  const sides = [
+    { side: lineups.home, team: lineups.home?.team },
+    { side: lineups.away, team: lineups.away?.team },
+  ];
+  const all = [];
+  for (const { side, team } of sides) {
+    if (!side) continue;
+    for (const p of [...(side.starters || []), ...(side.subs || [])]) {
+      const st = playerStats[p.name];
+      const r = st?.rating != null ? parseFloat(st.rating) : null;
+      if (r == null || Number.isNaN(r)) continue;
+      all.push({
+        name: p.name, headshot: p.headshot, jersey: p.jersey,
+        rating: r, teamName: team?.name || "", teamLogo: team?.logo || null,
+        goals: parseInt(st.goals, 10) || 0, assists: parseInt(st.assists, 10) || 0,
+      });
+    }
+  }
+  if (!all.length) return null;
+  all.sort((a, b) => b.rating - a.rating);
+  const top = all.slice(0, 3);
+
+  return (
+    <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+      <div className="eyebrow" style={{ marginBottom: 8 }}>⭐ Top performers</div>
+      {top.map((p, i) => (
+        <div key={p.name + i} style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "8px 0", borderTop: i > 0 ? "1px solid var(--line)" : "none",
+        }}>
+          {p.headshot ? (
+            <img src={p.headshot} alt="" width={36} height={36} loading="lazy"
+              style={{ borderRadius: "50%", objectFit: "cover", background: "#222", flexShrink: 0, border: "1.5px solid var(--line)" }} />
+          ) : (
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--pitch)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{p.jersey || "?"}</div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {i === 0 ? "🏅 " : ""}{shortName(p.name)}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+              {p.teamLogo && <img src={p.teamLogo} alt="" width={13} height={13} style={{ objectFit: "contain" }} />}
+              <span>{p.teamName}</span>
+              {p.goals > 0 && <span>· ⚽ {p.goals}</span>}
+              {p.assists > 0 && <span>· 🅰 {p.assists}</span>}
+            </div>
+          </div>
+          <div style={{
+            background: ratingColor(p.rating), borderRadius: 7,
+            minWidth: 40, padding: "5px 7px", fontSize: 15, fontWeight: 800, color: "#fff", textAlign: "center", flexShrink: 0,
+          }}>
+            {p.rating.toFixed(1)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Key stats at a glance (compact, for the overview tab) ─────────── */
+
+const GLANCE_LABELS = ["Possession %", "Shots", "On target", "Expected goals"];
+
+export function MatchGlance({ stats, match }) {
+  if (!stats?.length) return null;
+  const rows = stats.filter((s) => GLANCE_LABELS.includes(s.label));
+  if (!rows.length) return null;
+  return (
+    <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+      <div className="eyebrow" style={{ marginBottom: 8 }}>At a glance</div>
+      {rows.map((s) => {
+        const hv = parseFloat(s.home) || 0;
+        const av = parseFloat(s.away) || 0;
+        const total = hv + av || 1;
+        return (
+          <div key={s.label} style={{ padding: "7px 0", borderTop: "1px solid var(--line)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "baseline", marginBottom: 4, fontVariantNumeric: "tabular-nums" }}>
+              <b style={{ textAlign: "left", color: hv > av ? "var(--chalk)" : "var(--muted)" }}>{s.home}</b>
+              <span style={{ fontSize: 11, color: "var(--muted)", letterSpacing: "0.06em", textTransform: "uppercase" }}>{s.label}</span>
+              <b style={{ textAlign: "right", color: av > hv ? "var(--chalk)" : "var(--muted)" }}>{s.away}</b>
+            </div>
+            <div style={{ display: "flex", height: 4, gap: 2 }}>
+              <div style={{ width: `${(hv / total) * 100}%`, background: hv >= av ? "var(--saffron)" : "var(--line)", borderRadius: 2 }} />
+              <div style={{ width: `${(av / total) * 100}%`, background: av > hv ? "var(--saffron)" : "var(--line)", borderRadius: 2 }} />
             </div>
           </div>
         );
