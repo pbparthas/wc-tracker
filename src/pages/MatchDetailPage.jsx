@@ -34,10 +34,11 @@ export default function MatchDetailPage() {
   const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
   const h2h = useAiContent("h2h:" + id, () => h2hPrompt(match, matches), { ttlMs: WEEK });
   const wx = useWeather(match?.id, match?.city, match?.kickoff, match?.state);
+
+  const upcoming = match?.state === "pre";
   const { predictions } = usePredictions(upcoming ? match?.id : null);
   const { injuries } = useInjuries(upcoming || match?.state === "in" ? match?.id : null);
 
-  const upcoming = match?.state === "pre";
   const tabs = match ? [
     { id: "overview", label: "Overview" },
     ...(!upcoming ? [{ id: "timeline", label: "Timeline" }] : []),
