@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   getKey, setKey, forgetKey, hasKey, isRemembered,
@@ -19,7 +19,28 @@ export default function SettingsPage() {
   const [cleared, setCleared] = useState(null);
   const [shared, setShared] = useState(null);
   const [apifOn, setApifOn] = useState(isApiFootballEnabled);
+  const [persist, setPersist] = useState(null); // null = unknown/unsupported, true/false otherwise
   const { favs, toggle } = useFavorites();
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (!navigator.storage?.persisted) return;
+        const ok = await navigator.storage.persisted();
+        if (alive) setPersist(ok);
+      } catch { /* unsupported */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const askPersist = async () => {
+    try {
+      if (!navigator.storage?.persist) return;
+      const ok = await navigator.storage.persist();
+      setPersist(ok);
+    } catch { /* blocked */ }
+  };
 
   const share = async () => {
     const data = {
@@ -181,6 +202,26 @@ export default function SettingsPage() {
 
       <div className="card" style={{ padding: 16, marginBottom: 12 }}>
         <div className="eyebrow" style={{ marginBottom: 10 }}>Storage</div>
+        {persist !== null && (
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontSize: 13, marginBottom: 6 }}>
+              {persist ? (
+                <span style={{ color: "var(--saffron)" }}>🔒 Persistent — your key and data won't be evicted.</span>
+              ) : (
+                <span style={{ color: "var(--live)" }}>⚠️ Best-effort storage — your key may be cleared when the app closes.</span>
+              )}
+            </p>
+            {!persist && (
+              <>
+                <button className="btn" onClick={askPersist}>Keep my data on this device</button>
+                <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>
+                  Some browsers only grant this after you’ve installed the app to your home screen.
+                  Install it (above), reopen, then tap this again.
+                </p>
+              </>
+            )}
+          </div>
+        )}
         <button
           className="btn"
           onClick={() => setCleared(clearPrefix(""))}

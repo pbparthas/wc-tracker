@@ -31,6 +31,22 @@ const ClubsPage = React.lazy(() => import("./pages/epl/ClubsPage.jsx"));
 const ClubPage = React.lazy(() => import("./pages/epl/ClubPage.jsx"));
 const EplMatchDetailPage = React.lazy(() => import("./pages/epl/EplMatchDetailPage.jsx"));
 
+/* Ask the browser to keep our storage. Without this, localStorage (where the
+   Gemini key, favourites and cached data live) is "best-effort" and can be
+   evicted whenever the app closes or the device is low on space — which on
+   iOS home-screen PWAs happens constantly, so the key looks like it vanishes
+   every launch. Granting persistence stops eviction until the user clears it
+   themselves. Installed PWAs are usually granted silently; we re-check each
+   load in case it wasn't granted the first time. */
+async function requestPersistentStorage() {
+  try {
+    if (!navigator.storage?.persist) return;
+    if (await navigator.storage.persisted()) return;
+    await navigator.storage.persist();
+  } catch { /* unsupported or blocked — nothing we can do */ }
+}
+requestPersistentStorage();
+
 /* autoUpdate: a new deploy installs, skips waiting and reloads the page on its
    own, so a plain refresh always lands on the latest build. We also re-check
    for updates hourly so long-lived sessions don't go stale. */
