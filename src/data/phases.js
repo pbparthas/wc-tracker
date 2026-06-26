@@ -10,15 +10,13 @@ export const PHASES = [
   { label: "THE FINAL", dates: "19 July", detail: "MetLife Stadium, New York / New Jersey", final: true },
 ];
 
-/* Knockout round date windows (IST date keys). These are the authoritative
-   signal for bucketing fixtures into bracket columns — feeds mislabel the round
-   note (e.g. the 48-team first KO round gets tagged "Round of 16" when it's the
-   Round of 32). The `match` regex is only a fallback for date-less fixtures. */
+/* Bracket columns, in order. Each column's matches come from the static 2026
+   skeleton (data/bracket2026.js); here we only need the column id and label. */
 export const ROUNDS = [
-  { id: "R32", label: "Round of 32", from: "2026-06-28", to: "2026-07-03", size: 16, match: /round of 32/i },
-  { id: "R16", label: "Round of 16", from: "2026-07-04", to: "2026-07-08", size: 8, match: /round of 16/i },
-  { id: "QF", label: "Quarter-finals", from: "2026-07-09", to: "2026-07-12", size: 4, match: /quarter/i },
-  { id: "SF", label: "Semi-finals", from: "2026-07-14", to: "2026-07-16", size: 2, match: /semi/i },
-  { id: "THIRD", label: "Third place", from: "2026-07-18", to: "2026-07-18", size: 1, match: /third|3rd/i },
-  { id: "FINAL", label: "Final", from: "2026-07-19", to: "2026-07-19", size: 1, match: /final/i },
+  { id: "R32", label: "Round of 32" },
+  { id: "R16", label: "Round of 16" },
+  { id: "QF", label: "Quarter-finals" },
+  { id: "SF", label: "Semi-finals" },
+  { id: "THIRD", label: "Third place" },
+  { id: "FINAL", label: "Final" },
 ];

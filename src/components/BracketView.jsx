@@ -16,23 +16,34 @@ function Tie({ m }) {
   const p = istParts(m.kickoff);
   const done = m.state === "post";
   const winner = done ? (m.hg > m.ag ? "home" : m.ag > m.hg ? "away" : null) : null;
+  // Skeleton slots with no live fixture yet: show the feeder labels ("Winner
+  // Group A", "Winner Match 73") muted and don't link anywhere.
+  const place = m.placeholder;
+  const clickable = !place && !!m.id;
+  const go = () => clickable && navigate(`/match/${m.id}`);
   return (
     <div
       className="card tie"
-      style={{ cursor: "pointer" }}
-      onClick={() => m.id && navigate(`/match/${m.id}`)}
-      role="link"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && m.id && navigate(`/match/${m.id}`)}
+      style={{ cursor: clickable ? "pointer" : "default", opacity: place ? 0.92 : 1 }}
+      onClick={go}
+      role={clickable ? "link" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => e.key === "Enter" && go() : undefined}
     >
       {["home", "away"].map((side) => (
         <div className="tie-row" key={side}>
           <Flag team={m[side]} size={16} />
-          <span className="nm" style={{ fontWeight: winner === side ? 800 : 600, color: done && winner && winner !== side ? "var(--muted)" : "var(--chalk)" }}>
+          <span
+            className="nm"
+            style={{
+              fontWeight: winner === side ? 800 : 600,
+              color: place || (done && winner && winner !== side) ? "var(--muted)" : "var(--chalk)",
+            }}
+          >
             {m[side].name}
           </span>
           <span className="sc" style={{ color: winner === side ? "var(--saffron)" : "var(--chalk)" }}>
-            {m.state === "pre" ? "" : side === "home" ? m.hg : m.ag}
+            {place || m.state === "pre" ? "" : side === "home" ? m.hg : m.ag}
           </span>
         </div>
       ))}
