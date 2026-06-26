@@ -3,10 +3,26 @@
    API-Football IDs are prefixed with "af-" to avoid collision with ESPN IDs. */
 import { resolveTeam } from "../data/teams.js";
 import { tableOrder } from "./thirdPlace.js";
+import { cacheGet, cacheSet, clearPrefix } from "./storage.js";
 import * as espn from "./espn.js";
 import * as apif from "./apifootball.js";
 
 const ID_PREFIX = "af-";
+
+/* One-time migration: the app switched from a per-user ESPN/API-Football toggle
+   to always-on API-Football. Old localStorage may hold ESPN-shaped fixtures
+   (numeric ids) that mix badly with API-Football data (af- ids) and destabilise
+   the match count — wipe those caches once so every chunk re-fetches from the
+   single source. */
+const SOURCE_VERSION = "apif-primary-v1";
+try {
+  if (localStorage.getItem("golazo:sourceVersion") !== SOURCE_VERSION) {
+    clearPrefix("sched:");
+    clearPrefix("sum:");
+    clearPrefix("standings");
+    localStorage.setItem("golazo:sourceVersion", SOURCE_VERSION);
+  }
+} catch { /* private mode — nothing to migrate */ }
 
 function isApifId(id) {
   return String(id).startsWith(ID_PREFIX);
@@ -69,30 +85,50 @@ function fixtureToMatch(f) {
 
 let allFixturesCache = null;
 let allFixturesFetchedAt = 0;
+let allFixturesInflight = null;
 const ALL_FIXTURES_TTL = 60 * 1000;
+const ALL_FIXTURES_KEY = "apif:wc:fixtures";
 
 async function getAllFixtures(bust) {
   const now = Date.now();
   if (allFixturesCache && !bust && now - allFixturesFetchedAt < ALL_FIXTURES_TTL) {
     return allFixturesCache;
   }
-  const fixtures = await apif.fetchFixtures(apif.LEAGUES.worldcup, { season: 2026 });
-  allFixturesCache = fixtures;
-  allFixturesFetchedAt = now;
-  return fixtures;
+  // schedule.js fans out 6 chunk fetches at once; without this guard each one
+  // fires its own full-season request — six identical calls that burn the
+  // 100-req/day free tier and, when some 429, leave chunks reading from
+  // different sources so the match count flickers between refreshes. Share one
+  // in-flight request across all concurrent callers instead.
+  if (allFixturesInflight) return allFixturesInflight;
+  allFixturesInflight = apif
+    .fetchFixtures(apif.LEAGUES.worldcup, { season: 2026 })
+    .then((fixtures) => {
+      allFixturesCache = fixtures;
+      allFixturesFetchedAt = Date.now();
+      cacheSet(ALL_FIXTURES_KEY, fixtures, 24 * 60 * 60 * 1000);
+      return fixtures;
+    })
+    .finally(() => { allFixturesInflight = null; });
+  return allFixturesInflight;
 }
 
 export async function fetchScoreboard(fromYmd, toYmd, opts = {}) {
+  const from = fromYmd.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
+  const to = toYmd.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
+  const inRange = (f) => {
+    const d = (f.date || "").slice(0, 10);
+    return d >= from && d <= to;
+  };
   try {
     const all = await getAllFixtures(opts.bust);
-    const from = fromYmd.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
-    const to = toYmd.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
-    const filtered = all.filter((f) => {
-      const d = f.date.slice(0, 10);
-      return d >= from && d <= to;
-    });
-    return filtered.map(fixtureToMatch);
+    return all.filter(inRange).map(fixtureToMatch);
   } catch {
+    // API-Football unavailable (commonly a rate-limit). Prefer the last good
+    // API-Football snapshot so the schedule and bracket stay stable rather than
+    // flipping to ESPN's differently-shaped fixture set (and a different count).
+    // Only fall back to ESPN when we've never had an API-Football payload.
+    const snapshot = cacheGet(ALL_FIXTURES_KEY);
+    if (snapshot) return snapshot.filter(inRange).map(fixtureToMatch);
     return espn.fetchScoreboard(fromYmd, toYmd, opts);
   }
 }
