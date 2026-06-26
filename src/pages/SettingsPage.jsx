@@ -5,7 +5,6 @@ import {
   getModel, setModel, testKey, DEFAULT_MODEL,
 } from "../lib/gemini.js";
 import { clearPrefix } from "../lib/storage.js";
-import { isApiFootballEnabled, setApiFootballEnabled } from "../lib/datasource.js";
 import { useFavorites } from "../hooks/useFavorites.js";
 import { GROUPS, TEAMS } from "../data/teams.js";
 import InstallCard from "../components/InstallCard.jsx";
@@ -18,7 +17,6 @@ export default function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [cleared, setCleared] = useState(null);
   const [shared, setShared] = useState(null);
-  const [apifOn, setApifOn] = useState(isApiFootballEnabled);
   const [persist, setPersist] = useState(null); // null = unknown/unsupported, true/false otherwise
   const { favs, toggle } = useFavorites();
 
@@ -172,32 +170,6 @@ export default function SettingsPage() {
             ))}
           </div>
         ))}
-      </div>
-
-      <div className="card" style={{ padding: 16, marginBottom: 12 }}>
-        <div className="eyebrow" style={{ marginBottom: 10 }}>Data source</div>
-        <label className="check" style={{ marginBottom: 10 }}>
-          <input
-            type="checkbox"
-            checked={apifOn}
-            onChange={(e) => {
-              setApifOn(e.target.checked);
-              setApiFootballEnabled(e.target.checked);
-            }}
-          />
-          Use API-Football (Pro)
-          <span style={{ color: "var(--muted)", fontSize: 12 }}>
-            — richer data: player photos, xG, ratings, passes
-          </span>
-        </label>
-        <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
-          {apifOn
-            ? "Fetching from API-Football via proxy. Falls back to ESPN on errors."
-            : "Using ESPN's free public feed. Enable API-Football for enhanced data."}
-        </p>
-        <Link to="/settings/api-compare" className="btn" style={{ textDecoration: "none" }}>
-          API comparison tool
-        </Link>
       </div>
 
       <div className="card" style={{ padding: 16, marginBottom: 12 }}>

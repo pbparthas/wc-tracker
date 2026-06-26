@@ -1,30 +1,12 @@
-/* Unified data source: API-Football (via proxy) when enabled, ESPN as fallback.
-   Transforms API-Football responses to match the ESPN format the app expects.
+/* Unified data source: API-Football (via proxy) is always primary; ESPN is the
+   fallback. Transforms API-Football responses to the shape the app expects.
    API-Football IDs are prefixed with "af-" to avoid collision with ESPN IDs. */
 import { resolveTeam } from "../data/teams.js";
 import { tableOrder } from "./thirdPlace.js";
-import { clearPrefix } from "./storage.js";
 import * as espn from "./espn.js";
 import * as apif from "./apifootball.js";
 
-const FLAG_KEY = "golazo:useApiFootball";
 const ID_PREFIX = "af-";
-
-export function isApiFootballEnabled() {
-  return localStorage.getItem(FLAG_KEY) === "1";
-}
-
-export function setApiFootballEnabled(on) {
-  const was = isApiFootballEnabled();
-  if (on) localStorage.setItem(FLAG_KEY, "1");
-  else localStorage.removeItem(FLAG_KEY);
-  if (on !== was) {
-    clearPrefix("sched:");
-    clearPrefix("sum:");
-    clearPrefix("standings");
-    allFixturesCache = null;
-  }
-}
 
 function isApifId(id) {
   return String(id).startsWith(ID_PREFIX);
@@ -101,7 +83,6 @@ async function getAllFixtures(bust) {
 }
 
 export async function fetchScoreboard(fromYmd, toYmd, opts = {}) {
-  if (!isApiFootballEnabled()) return espn.fetchScoreboard(fromYmd, toYmd, opts);
   try {
     const all = await getAllFixtures(opts.bust);
     const from = fromYmd.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3");
@@ -119,7 +100,6 @@ export async function fetchScoreboard(fromYmd, toYmd, opts = {}) {
 /* ── Standings ────────────────────────────────────────────────────── */
 
 export async function fetchStandings() {
-  if (!isApiFootballEnabled()) return espn.fetchStandings();
   try {
     const raw = await apif.fetchStandings(apif.LEAGUES.worldcup, 2026);
     const out = {};
@@ -359,7 +339,7 @@ async function fetchApifSummary(fixtureId) {
 /* ── Predictions (API-Football only) ─────────────────────────────── */
 
 export async function fetchPredictions(matchId) {
-  if (!isApiFootballEnabled() || !isApifId(matchId)) return null;
+  if (!isApifId(matchId)) return null;
   try {
     return await apif.fetchPredictions(stripPrefix(matchId));
   } catch {
@@ -370,7 +350,7 @@ export async function fetchPredictions(matchId) {
 /* ── Injuries (API-Football only) ────────────────────────────────── */
 
 export async function fetchInjuries(matchId) {
-  if (!isApiFootballEnabled() || !isApifId(matchId)) return null;
+  if (!isApifId(matchId)) return null;
   try {
     return await apif.fetchInjuries(stripPrefix(matchId));
   } catch {
@@ -381,12 +361,10 @@ export async function fetchInjuries(matchId) {
 /* ── Top scorers (API-Football preferred, ESPN fallback) ─────────── */
 
 export async function fetchTopScorers() {
-  if (isApiFootballEnabled()) {
-    try {
-      const rows = await apif.fetchTopScorers(apif.LEAGUES.worldcup, 2026);
-      if (rows.length) return { source: "apif", goals: rows };
-    } catch { /* fallback to ESPN */ }
-  }
+  try {
+    const rows = await apif.fetchTopScorers(apif.LEAGUES.worldcup, 2026);
+    if (rows.length) return { source: "apif", goals: rows };
+  } catch { /* fallback to ESPN */ }
   const s = await espn.fetchScorers();
   return {
     source: "espn",
@@ -407,7 +385,7 @@ export async function fetchTopScorers() {
 const APIF_LEAGUE_MAP = { "soccer/eng.1": { id: 39, season: 2026 } };
 
 function apifLeagueFor(espnSlug) {
-  return isApiFootballEnabled() ? APIF_LEAGUE_MAP[espnSlug] || null : null;
+  return APIF_LEAGUE_MAP[espnSlug] || null;
 }
 
 let leagueFixturesCache = {};
