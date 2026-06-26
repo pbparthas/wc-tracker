@@ -19,6 +19,6 @@ export const ROUNDS = [
   { id: "R16", label: "Round of 16", from: "2026-07-04", to: "2026-07-08", size: 8, match: /round of 16/i },
   { id: "QF", label: "Quarter-finals", from: "2026-07-09", to: "2026-07-12", size: 4, match: /quarter/i },
   { id: "SF", label: "Semi-finals", from: "2026-07-14", to: "2026-07-16", size: 2, match: /semi/i },
-  { id: "THIRD", label: "Third place", from: "2026-07-18", to: "2026-07-18", size: 1, match: /third/i },
+  { id: "THIRD", label: "Third place", from: "2026-07-18", to: "2026-07-18", size: 1, match: /third|3rd/i },
   { id: "FINAL", label: "Final", from: "2026-07-19", to: "2026-07-19", size: 1, match: /final/i },
 ];

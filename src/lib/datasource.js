@@ -122,14 +122,17 @@ export async function fetchScoreboard(fromYmd, toYmd, opts = {}) {
   try {
     const all = await getAllFixtures(opts.bust);
     return all.filter(inRange).map(fixtureToMatch);
-  } catch {
-    // API-Football unavailable (commonly a rate-limit). Prefer the last good
-    // API-Football snapshot so the schedule and bracket stay stable rather than
-    // flipping to ESPN's differently-shaped fixture set (and a different count).
-    // Only fall back to ESPN when we've never had an API-Football payload.
+  } catch (e) {
+    // API-Football unavailable (commonly a rate-limit). Serve the last good
+    // API-Football snapshot. We deliberately do NOT fall back to ESPN for World
+    // Cup fixtures: ESPN still models a 32-team bracket and labels the 48-team
+    // first knockout round "Round of 16", so its fixtures land in the wrong
+    // bracket column (R32 matchups show up under Round of 16) and corrupt the
+    // knockout view. Keeping the last good data — or nothing — beats a wrong
+    // bracket. (ESPN is still used elsewhere: commentary, standings, scorers.)
     const snapshot = cacheGet(ALL_FIXTURES_KEY);
     if (snapshot) return snapshot.filter(inRange).map(fixtureToMatch);
-    return espn.fetchScoreboard(fromYmd, toYmd, opts);
+    throw e;
   }
 }
 

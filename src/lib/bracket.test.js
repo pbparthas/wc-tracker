@@ -28,6 +28,19 @@ describe("assembleBracket", () => {
     expect(byId.FINAL).toEqual(["6"]);
   });
 
+  it("keeps a Round of 32 fixture in R32 even when its IST kickoff rolls into the R16 window", () => {
+    // Argentina's R32 match kicks off 22:00 UTC on 3 Jul = 03:30 IST on 4 Jul,
+    // which falls in the R16 date window (4–8 Jul). The round label must win so
+    // it stays in Round of 32 rather than leaking into Round of 16.
+    const rounds = assembleBracket([
+      m("argR32", "Round of 32", "2026-07-03T22:00:00Z"),
+      m("realR16", "Round of 16", "2026-07-05T19:00:00Z"),
+    ]);
+    const byId = Object.fromEntries(rounds.map((r) => [r.id, r.matches.filter(Boolean).map((x) => x.id)]));
+    expect(byId.R32).toEqual(["argR32"]);
+    expect(byId.R16).toEqual(["realR16"]);
+  });
+
   it("excludes group fixtures and never double-assigns a match", () => {
     const rounds = assembleBracket([
       m("g", "Group L", "2026-06-26T19:00:00Z"),
