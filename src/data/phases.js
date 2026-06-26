@@ -13,7 +13,11 @@ export const PHASES = [
 /* Knockout round date windows (IST date keys) used to bucket fixtures into
    bracket columns when ESPN's stage note is missing or ambiguous. */
 export const ROUNDS = [
-  { id: "R32", label: "Round of 32", from: "2026-06-28", to: "2026-07-03", size: 16, match: /round of 32/i },
+  /* ESPN labels the first KO round "Round of 16" (legacy naming — they haven't
+     updated for the 2026 48-team format). Accept both so those fixtures land in
+     the R32 column. Matches are sorted by kickoff and capped at size 16, so the
+     earliest 16 (June 28 – July 3) go to R32 and the rest fall through to R16. */
+  { id: "R32", label: "Round of 32", from: "2026-06-28", to: "2026-07-03", size: 16, match: /round of (32|16)/i },
   { id: "R16", label: "Round of 16", from: "2026-07-04", to: "2026-07-08", size: 8, match: /round of 16/i },
   { id: "QF", label: "Quarter-finals", from: "2026-07-09", to: "2026-07-12", size: 4, match: /quarter/i },
   { id: "SF", label: "Semi-finals", from: "2026-07-14", to: "2026-07-16", size: 2, match: /semi/i },
