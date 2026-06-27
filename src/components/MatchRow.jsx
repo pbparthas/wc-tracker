@@ -10,15 +10,18 @@ export default function MatchRow({ m, fav = false, linkBase = "/match" }) {
   const p = istParts(m.kickoff);
   const upcoming = m.state === "pre";
   const live = m.state === "in";
+  // Skeleton slots with no live fixture yet have no detail page to open.
+  const clickable = !m.placeholder && !!m.id;
+  const go = () => clickable && navigate(`${linkBase}/${m.id}`);
 
   return (
     <div
       className={"card" + (fav ? " fav" : "")}
-      style={{ padding: "12px 14px", marginBottom: 8, cursor: "pointer", borderColor: live ? "var(--live)" : undefined }}
-      onClick={() => m.id && navigate(`${linkBase}/${m.id}`)}
-      role="link"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && m.id && navigate(`/match/${m.id}`)}
+      style={{ padding: "12px 14px", marginBottom: 8, cursor: clickable ? "pointer" : "default", borderColor: live ? "var(--live)" : undefined }}
+      onClick={go}
+      role={clickable ? "link" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => e.key === "Enter" && go() : undefined}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
         <span className="eyebrow">{m.stage}{m.city ? " · " + m.city : ""}</span>

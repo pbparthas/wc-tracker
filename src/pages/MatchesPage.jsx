@@ -7,10 +7,12 @@ import AiCard from "../components/AiCard.jsx";
 import InstallCard from "../components/InstallCard.jsx";
 import WelcomeCard from "../components/WelcomeCard.jsx";
 import { useSchedule } from "../hooks/useSchedule.js";
+import { useStandings } from "../hooks/useStandings.js";
 import { useFavorites } from "../hooks/useFavorites.js";
 import { useAiContent } from "../hooks/useAiContent.js";
 import { istDateKey, istParts, dateKeyRange, IST } from "../lib/time.js";
 import { TOURNAMENT } from "../data/phases.js";
+import { mergeKnockoutSchedule } from "../lib/bracket.js";
 import { digestPrompt, espnDownPrompt } from "../lib/prompts.js";
 
 const DATES = dateKeyRange(TOURNAMENT.start, TOURNAMENT.end);
@@ -22,18 +24,27 @@ const clampToday = () => {
 export default function MatchesPage() {
   const navigate = useNavigate();
   const { matches, loading, error, refresh, fetchedAt, stale } = useSchedule();
+  const { standings } = useStandings();
   const { favs } = useFavorites();
   const [day, setDay] = useState(clampToday);
   const today = istDateKey();
 
+  // Group fixtures from the feed plus the knockout skeleton (bound fixtures or
+  // placeholders), so dates past the group stage stay populated even before the
+  // feed publishes the knockout fixtures.
+  const allMatches = useMemo(
+    () => mergeKnockoutSchedule(matches, standings),
+    [matches, standings]
+  );
+
   const dayMatches = useMemo(
-    () => matches.filter((m) => istParts(m.kickoff)?.dateKey === day),
-    [matches, day]
+    () => allMatches.filter((m) => istParts(m.kickoff)?.dateKey === day),
+    [allMatches, day]
   );
 
   const favAll = useMemo(
-    () => matches.filter((m) => favs.includes(m.home.code) || favs.includes(m.away.code)),
-    [matches, favs]
+    () => allMatches.filter((m) => favs.includes(m.home.code) || favs.includes(m.away.code)),
+    [allMatches, favs]
   );
   const live = dayMatches.filter((m) => m.state === "in");
   const up = dayMatches.filter((m) => m.state === "pre");
@@ -109,7 +120,7 @@ export default function MatchesPage() {
 
         <DatePager dates={DATES} selected={day} onSelect={setDay} />
 
-        {loading && matches.length === 0 && (
+        {loading && allMatches.length === 0 && (
           <div className="card" style={{ padding: 20, textAlign: "center", color: "var(--muted)" }}>
             <span className="pulse">Loading the schedule…</span>
           </div>
@@ -133,7 +144,7 @@ export default function MatchesPage() {
             {done.map((m) => <MatchRow key={m.id} m={m} />)}
           </>
         )}
-        {!loading && dayMatches.length === 0 && matches.length > 0 && (
+        {!loading && dayMatches.length === 0 && allMatches.length > 0 && (
           <div className="card" style={{ padding: 16, color: "var(--muted)", fontSize: 13 }}>
             No matches on this day — rest day for the tournament.
           </div>

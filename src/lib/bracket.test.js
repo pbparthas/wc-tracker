@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assembleBracket } from "./bracket.js";
+import { assembleBracket, mergeKnockoutSchedule } from "./bracket.js";
 
 const live = (id, kickoff, home, away, extra = {}) => ({
   id,
@@ -113,6 +113,35 @@ describe("assembleBracket", () => {
     expect(card.placeholder).toBeUndefined(); // real fixture → clickable
     expect(card.home.name).toBe("Argentina");
     expect(card.away.name).toBe("Cabo Verde");
+  });
+
+  it("merges group fixtures with the full knockout skeleton for the schedule", () => {
+    const group = { id: "g1", stage: "Group A", kickoff: "2026-06-20T19:00:00Z", home: { name: "Spain", code: "ESP" }, away: { name: "Japan", code: "JPN" }, state: "post", hg: 2, ag: 1 };
+    const merged = mergeKnockoutSchedule([group], {});
+    // group fixture preserved
+    expect(merged.find((m) => m.id === "g1")).toBeTruthy();
+    // all 32 knockout slots present as placeholders
+    const koPlaceholders = merged.filter((m) => m.placeholder);
+    expect(koPlaceholders).toHaveLength(32);
+    // a R16 placeholder carries a readable round label and a date past Jul 3
+    const r16 = koPlaceholders.find((m) => m.stage === "Round of 16");
+    expect(r16).toBeTruthy();
+    expect(new Date(r16.kickoff) > new Date("2026-07-03T00:00:00Z")).toBe(true);
+    // sorted by kickoff
+    for (let i = 1; i < merged.length; i++) {
+      expect(new Date(merged[i].kickoff) >= new Date(merged[i - 1].kickoff)).toBe(true);
+    }
+  });
+
+  it("does not duplicate a bound knockout fixture in the merged schedule", () => {
+    const played3 = (name) => ({ team: { name, code: name.slice(0, 3).toUpperCase() }, p: 3, pts: 9 });
+    const standings = { A: [played3("Argentina"), played3("Mexico"), played3("Qatar"), played3("Chad")] };
+    const fixture = { id: "af-555", stage: "Round of 32", kickoff: "2026-07-01T01:00:00Z", home: { name: "Argentina", code: "ARG" }, away: { name: "Cabo Verde", code: "CPV" }, state: "pre" };
+    const merged = mergeKnockoutSchedule([fixture], standings);
+    expect(merged.filter((m) => m.id === "af-555")).toHaveLength(1);
+    // still exactly 32 knockout entries (31 placeholders + 1 bound fixture)
+    const ko = merged.filter((m) => m.placeholder || m.id === "af-555");
+    expect(ko).toHaveLength(32);
   });
 
   it("ignores group-stage fixtures", () => {

@@ -24,6 +24,16 @@ const teamKey = (t) => (t?.code || t?.name || "").toString().trim().toUpperCase(
 
 const GROUP_WINNER = /^Winner Group ([A-L])$/i;
 const GROUP_RUNNERUP = /^Runner-up Group ([A-L])$/i;
+const ROUND_LABEL = Object.fromEntries(ROUNDS.map((r) => [r.id, r.label]));
+
+// A feed fixture is a knockout fixture if it isn't a group game and either
+// carries a knockout round label or kicks off on/after the knockout window.
+function isKnockoutFixture(m) {
+  const t = new Date(m.kickoff).getTime();
+  if (isNaN(t)) return false;
+  if (/^group/i.test(m.stage || "")) return false;
+  return !!m.stage || t >= KO_START;
+}
 
 // A group is "settled" once every team has played its three matches, so the top
 // two are final and safe to drop into the bracket. Until then we leave the
@@ -66,20 +76,17 @@ function placeholderTie(slot, standings) {
     kickoff: slot.date,
     city: slot.city,
     venue: slot.venue,
-    stage: slot.round,
+    stage: ROUND_LABEL[slot.round] || slot.round,
     placeholder: true,
   };
 }
 
-export function assembleBracket(liveMatches, standings) {
-  const ko = (liveMatches || []).filter((m) => {
-    const t = new Date(m.kickoff).getTime();
-    if (isNaN(t)) return false;
-    if (/^group/i.test(m.stage || "")) return false;
-    // Explicit knockout label, or any post-group-stage fixture whose round the
-    // feed left blank (API-Football sometimes ships an empty round note).
-    return !!m.stage || t >= KO_START;
-  });
+/* Bind the live knockout fixtures onto the static skeleton slots. Returns the
+   slots (with resolved feeder teams), a slotNo->fixture map, and the set of
+   fixture ids that were consumed. Shared by the bracket and the merged schedule
+   so both agree on what's bound where. */
+function bindSkeleton(liveMatches, standings) {
+  const ko = (liveMatches || []).filter(isKnockoutFixture);
 
   const slots = KO_SKELETON.map((s) => ({
     ...s,
@@ -138,6 +145,11 @@ export function assembleBracket(liveMatches, standings) {
     usedFixtures.add(p.fid);
   }
 
+  return { ko, slots, bound, usedFixtures };
+}
+
+export function assembleBracket(liveMatches, standings) {
+  const { slots, bound } = bindSkeleton(liveMatches, standings);
   return ROUNDS.map((round) => {
     const matches = slots
       .filter((s) => s.round === round.id)
@@ -145,4 +157,24 @@ export function assembleBracket(liveMatches, standings) {
       .map((s) => bound.get(s.no) || placeholderTie(s, standings));
     return { ...round, matches };
   });
+}
+
+/* The full match list for the Matches tab: group fixtures from the feed, plus
+   every knockout slot — a bound live fixture where one exists, otherwise a
+   skeleton placeholder (resolved teams where the group is settled). This keeps
+   the schedule populated past the group stage even before the feed publishes
+   the knockout fixtures. Sorted by kickoff. */
+export function mergeKnockoutSchedule(liveMatches, standings) {
+  const { ko, slots, bound, usedFixtures } = bindSkeleton(liveMatches, standings);
+  const groupFixtures = (liveMatches || []).filter((m) => !isKnockoutFixture(m));
+  const slotMatches = slots
+    .slice()
+    .sort((a, b) => a.t - b.t)
+    .map((s) => bound.get(s.no) || placeholderTie(s, standings));
+  // Any feed knockout fixture that didn't bind to a slot — keep it rather than
+  // drop real data.
+  const leftovers = ko.filter((f) => !usedFixtures.has(f.id));
+  return [...groupFixtures, ...slotMatches, ...leftovers].sort(
+    (a, b) => new Date(a.kickoff) - new Date(b.kickoff)
+  );
 }
