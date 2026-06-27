@@ -137,7 +137,10 @@ export default function MatchDetailPage() {
           {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
           {!upcoming && <MatchGlance stats={summary?.stats} />}
-          {!upcoming && <TopPerformers lineups={summary?.lineups} playerStats={summary?.playerStats} />}
+          {/* Player ratings start at a ~6.5-7.0 baseline and only diverge as the
+              match is played, so a "top performers" ranking is meaningless until
+              full-time. Live per-player ratings still show on the pitch view. */}
+          {match.state === "post" && <TopPerformers lineups={summary?.lineups} playerStats={summary?.playerStats} />}
 
           {match.state !== "post" && <AiCard title="Head-to-head & form" ai={h2h} cta="✨ H2H & form" />}
 
