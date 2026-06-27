@@ -90,6 +90,31 @@ describe("assembleBracket", () => {
     expect(m79).toBeTruthy();
   });
 
+  it("binds a fixture by team identity, surfacing the third-place opponent and a link", () => {
+    // Argentina = Winner Group A (resolved from standings). Its R32 opponent is
+    // Cabo Verde, a third-placed side the standings can't resolve — it only
+    // comes from the live fixture. The fixture's kickoff is deliberately a few
+    // hours off the skeleton slot to prove time isn't what binds it.
+    const played3 = (name) => ({ team: { name, code: name.slice(0, 3).toUpperCase() }, p: 3, pts: 9 });
+    const standings = {
+      A: [played3("Argentina"), played3("Mexico"), played3("Qatar"), played3("Chad")],
+    };
+    const fixture = {
+      id: "af-555",
+      stage: "Round of 16", // feed's (wrong) label — must not matter
+      kickoff: "2026-07-01T04:30:00Z", // ~3.5h off slot 79's 01:00Z
+      home: { name: "Argentina", code: "ARG" },
+      away: { name: "Cabo Verde", code: "CPV" },
+      state: "pre",
+    };
+    const rounds = assembleBracket([fixture], standings);
+    const card = round(rounds, "R32").matches.find((m) => m.id === "af-555");
+    expect(card).toBeTruthy(); // bound somewhere in R32
+    expect(card.placeholder).toBeUndefined(); // real fixture → clickable
+    expect(card.home.name).toBe("Argentina");
+    expect(card.away.name).toBe("Cabo Verde");
+  });
+
   it("ignores group-stage fixtures", () => {
     const rounds = assembleBracket([
       { id: "g", stage: "Group L", kickoff: "2026-06-26T19:00:00Z", home: { name: "Spain" }, away: { name: "Japan" }, state: "pre" },

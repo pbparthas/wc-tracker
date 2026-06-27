@@ -14,6 +14,13 @@ const KO_START = Date.parse("2026-06-28T00:00:00Z");
 // this is just the "no slot at all" cutoff. Rounds are days apart, so it can be
 // generous without risking a cross-round mis-bind.
 const BIND_TOLERANCE_MS = 18 * 60 * 60 * 1000;
+// Team-identity binding tolerates much larger time drift (the skeleton's time
+// may be off) but still won't reach across rounds: a team's matches in adjacent
+// rounds are days apart, well beyond this window.
+const TEAM_BIND_TOLERANCE_MS = 48 * 60 * 60 * 1000;
+
+// A stable identity for matching feed teams against resolved feeder teams.
+const teamKey = (t) => (t?.code || t?.name || "").toString().trim().toUpperCase();
 
 const GROUP_WINNER = /^Winner Group ([A-L])$/i;
 const GROUP_RUNNERUP = /^Runner-up Group ([A-L])$/i;
@@ -74,19 +81,57 @@ export function assembleBracket(liveMatches, standings) {
     return !!m.stage || t >= KO_START;
   });
 
-  const slots = KO_SKELETON.map((s) => ({ ...s, t: Date.parse(s.date) }));
+  const slots = KO_SKELETON.map((s) => ({
+    ...s,
+    t: Date.parse(s.date),
+    homeTeam: resolveFeeder(s.home, standings),
+    awayTeam: resolveFeeder(s.away, standings),
+  }));
 
-  // Greedily bind each fixture to the closest free slot by kickoff time.
+  const bound = new Map();
+  const usedFixtures = new Set();
+
+  // Pass 1 — bind by team identity. A fixture whose team matches a slot's
+  // resolved feeder (e.g. the slot's "Winner Group A" resolved to Argentina, and
+  // the fixture is Argentina vs Cabo Verde) IS that slot's match, regardless of
+  // how far the feed's kickoff time drifts from the skeleton's. This also pins
+  // the third-place opponent the standings can't resolve. A loose time guard
+  // keeps a team's later-round fixture from matching its earlier-round slot.
+  const cands = [];
+  for (const f of ko) {
+    const fh = teamKey(f.home);
+    const fa = teamKey(f.away);
+    if (!fh && !fa) continue;
+    for (const s of slots) {
+      if (Math.abs(new Date(f.kickoff).getTime() - s.t) > TEAM_BIND_TOLERANCE_MS) continue;
+      const sh = teamKey(s.homeTeam);
+      const sa = teamKey(s.awayTeam);
+      let score = 0;
+      if (sh && (sh === fh || sh === fa)) score++;
+      if (sa && (sa === fh || sa === fa)) score++;
+      if (score) cands.push({ no: s.no, fixture: f, fid: f.id, score });
+    }
+  }
+  cands.sort((a, b) => b.score - a.score);
+  for (const c of cands) {
+    if (bound.has(c.no) || usedFixtures.has(c.fid)) continue;
+    bound.set(c.no, c.fixture);
+    usedFixtures.add(c.fid);
+  }
+
+  // Pass 2 — bind whatever's left to the closest free slot by kickoff time
+  // (covers fixtures whose teams aren't resolvable yet, e.g. two third-placed
+  // sides, and early fixtures before any group has settled).
   const pairs = [];
   for (const s of slots) {
+    if (bound.has(s.no)) continue;
     for (const f of ko) {
+      if (usedFixtures.has(f.id)) continue;
       const delta = Math.abs(new Date(f.kickoff).getTime() - s.t);
       if (delta <= BIND_TOLERANCE_MS) pairs.push({ no: s.no, fixture: f, fid: f.id, delta });
     }
   }
   pairs.sort((a, b) => a.delta - b.delta);
-  const bound = new Map();
-  const usedFixtures = new Set();
   for (const p of pairs) {
     if (bound.has(p.no) || usedFixtures.has(p.fid)) continue;
     bound.set(p.no, p.fixture);
