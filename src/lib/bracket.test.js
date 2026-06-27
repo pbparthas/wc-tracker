@@ -63,6 +63,33 @@ describe("assembleBracket", () => {
     expect(inR16).toBe(false);
   });
 
+  it("resolves group winner/runner-up feeders from settled standings", () => {
+    // Match 73 = Runner-up Group A vs Runner-up Group B. A four-team group is
+    // settled once everyone has played 3.
+    const played3 = (name, pts) => ({ team: { name, code: name.slice(0, 3).toUpperCase(), flag: "", logo: null }, p: 3, pts });
+    const standings = {
+      A: [played3("Spain", 9), played3("Argentina", 6), played3("Qatar", 3), played3("Chad", 0)],
+      B: [played3("France", 7), played3("Denmark", 5), played3("Tunisia", 3), played3("Peru", 1)],
+    };
+    const rounds = assembleBracket([], standings);
+    const m73 = round(rounds, "R32").matches[0];
+    expect(m73.home.name).toBe("Argentina"); // runner-up A
+    expect(m73.away.name).toBe("Denmark"); // runner-up B
+  });
+
+  it("leaves a feeder as a label while its group is unsettled", () => {
+    const standings = {
+      A: [
+        { team: { name: "Spain" }, p: 2, pts: 6 },
+        { team: { name: "Argentina" }, p: 2, pts: 3 },
+      ],
+    };
+    const rounds = assembleBracket([], standings);
+    // Match 79 = Winner Group A vs 3rd ...; group A only played 2, so unresolved.
+    const m79 = round(rounds, "R32").matches.find((m) => m.home.name === "Winner Group A");
+    expect(m79).toBeTruthy();
+  });
+
   it("ignores group-stage fixtures", () => {
     const rounds = assembleBracket([
       { id: "g", stage: "Group L", kickoff: "2026-06-26T19:00:00Z", home: { name: "Spain" }, away: { name: "Japan" }, state: "pre" },

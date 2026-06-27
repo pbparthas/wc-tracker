@@ -55,8 +55,8 @@ function Tie({ m }) {
   );
 }
 
-export default function BracketView({ matches }) {
-  const rounds = assembleBracket(matches);
+export default function BracketView({ matches, standings }) {
+  const rounds = assembleBracket(matches, standings);
   return (
     <div className="bracket">
       {rounds.map((r) => (

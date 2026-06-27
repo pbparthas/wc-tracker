@@ -15,11 +15,43 @@ const KO_START = Date.parse("2026-06-28T00:00:00Z");
 // generous without risking a cross-round mis-bind.
 const BIND_TOLERANCE_MS = 18 * 60 * 60 * 1000;
 
-function placeholderTie(slot) {
+const GROUP_WINNER = /^Winner Group ([A-L])$/i;
+const GROUP_RUNNERUP = /^Runner-up Group ([A-L])$/i;
+
+// A group is "settled" once every team has played its three matches, so the top
+// two are final and safe to drop into the bracket. Until then we leave the
+// feeder label ("Winner Group A") in place rather than show a team that could
+// still change.
+function groupSettled(rows) {
+  return Array.isArray(rows) && rows.length >= 2 && rows.every((e) => (e.p ?? 0) >= 3);
+}
+
+/* Resolve a feeder label to a real qualified team from the live standings.
+   Group winners and runners-up resolve once their group is settled; third-place
+   slots ("3rd Group C/E/F/H") and "Winner Match N" depend on results that don't
+   exist yet, so they stay as labels. */
+function resolveFeeder(label, standings) {
+  if (!standings) return null;
+  let m = GROUP_WINNER.exec(label);
+  if (m) {
+    const g = standings[m[1].toUpperCase()];
+    return groupSettled(g) ? g[0].team : null;
+  }
+  m = GROUP_RUNNERUP.exec(label);
+  if (m) {
+    const g = standings[m[1].toUpperCase()];
+    return groupSettled(g) ? g[1].team : null;
+  }
+  return null;
+}
+
+function placeholderTie(slot, standings) {
+  const home = resolveFeeder(slot.home, standings);
+  const away = resolveFeeder(slot.away, standings);
   return {
     id: `ko-${slot.no}`,
-    home: { code: null, name: slot.home, flag: "", logo: null },
-    away: { code: null, name: slot.away, flag: "", logo: null },
+    home: home || { code: null, name: slot.home, flag: "", logo: null },
+    away: away || { code: null, name: slot.away, flag: "", logo: null },
     hg: null,
     ag: null,
     state: "pre",
@@ -32,7 +64,7 @@ function placeholderTie(slot) {
   };
 }
 
-export function assembleBracket(liveMatches) {
+export function assembleBracket(liveMatches, standings) {
   const ko = (liveMatches || []).filter((m) => {
     const t = new Date(m.kickoff).getTime();
     if (isNaN(t)) return false;
@@ -65,7 +97,7 @@ export function assembleBracket(liveMatches) {
     const matches = slots
       .filter((s) => s.round === round.id)
       .sort((a, b) => a.t - b.t)
-      .map((s) => bound.get(s.no) || placeholderTie(s));
+      .map((s) => bound.get(s.no) || placeholderTie(s, standings));
     return { ...round, matches };
   });
 }

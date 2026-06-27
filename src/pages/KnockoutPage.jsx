@@ -1,10 +1,12 @@
 import React from "react";
 import BracketView from "../components/BracketView.jsx";
 import { useSchedule } from "../hooks/useSchedule.js";
+import { useStandings } from "../hooks/useStandings.js";
 import { PHASES } from "../data/phases.js";
 
 export default function KnockoutPage() {
   const { matches, loading, refresh } = useSchedule();
+  const { standings } = useStandings();
   return (
     <div className="wrap" style={{ paddingTop: 16 }}>
       <h2 className="disp" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
@@ -14,7 +16,7 @@ export default function KnockoutPage() {
         Tracking every round until the trophy is lifted at MetLife on 19 July. Swipe the bracket sideways.
       </p>
 
-      <BracketView matches={matches} />
+      <BracketView matches={matches} standings={standings} />
 
       <div style={{ margin: "6px 0 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span className="eyebrow">Tournament phases</span>
