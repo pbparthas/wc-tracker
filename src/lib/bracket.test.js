@@ -35,6 +35,9 @@ describe("assembleBracket", () => {
     const final = round(rounds, "FINAL").matches[0];
     expect(final.home.name).toBe("Winner Match 101");
     expect(final.away.name).toBe("Winner Match 102");
+    // every card carries its FIFA match number so it maps to "Winner Match NN"
+    expect(r32[0].matchNo).toBe(73);
+    expect(final.matchNo).toBe(104);
   });
 
   it("snaps a live fixture onto its slot by kickoff time", () => {

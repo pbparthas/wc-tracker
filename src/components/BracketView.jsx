@@ -48,6 +48,7 @@ function Tie({ m }) {
         </div>
       ))}
       <div className="tie-meta">
+        {m.matchNo ? <span style={{ color: "var(--saffron)", fontWeight: 700 }}>M{m.matchNo} · </span> : null}
         {m.state === "in" ? <span style={{ color: "var(--live)", fontWeight: 700 }}>{m.status}</span> : p ? `${p.day} · ${p.time} IST` : "TBC"}
         {m.city ? ` · ${m.city}` : ""}
       </div>

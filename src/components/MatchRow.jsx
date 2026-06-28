@@ -24,7 +24,7 @@ export default function MatchRow({ m, fav = false, linkBase = "/match" }) {
       onKeyDown={clickable ? (e) => e.key === "Enter" && go() : undefined}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-        <span className="eyebrow">{m.stage}{m.city ? " · " + m.city : ""}</span>
+        <span className="eyebrow">{m.stage}{m.matchNo ? " · M" + m.matchNo : ""}{m.city ? " · " + m.city : ""}</span>
         <StatusPill status={m.status} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8 }}>

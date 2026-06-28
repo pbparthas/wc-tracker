@@ -67,6 +67,7 @@ function placeholderTie(slot, standings) {
   const away = resolveFeeder(slot.away, standings);
   return {
     id: `ko-${slot.no}`,
+    matchNo: slot.no,
     home: home || { code: null, name: slot.home, flag: "", logo: null },
     away: away || { code: null, name: slot.away, flag: "", logo: null },
     hg: null,
@@ -154,9 +155,15 @@ export function assembleBracket(liveMatches, standings) {
     const matches = slots
       .filter((s) => s.round === round.id)
       .sort((a, b) => a.t - b.t)
-      .map((s) => bound.get(s.no) || placeholderTie(s, standings));
+      .map((s) => withMatchNo(bound.get(s.no), s) || placeholderTie(s, standings));
     return { ...round, matches };
   });
+}
+
+// Tag a bound fixture with the skeleton match number of the slot it filled, so
+// the card can show "Match 73" to match the "Winner Match 73" feeder labels.
+function withMatchNo(fixture, slot) {
+  return fixture ? { ...fixture, matchNo: slot.no } : null;
 }
 
 /* The full match list for the Matches tab: group fixtures from the feed, plus
@@ -170,7 +177,7 @@ export function mergeKnockoutSchedule(liveMatches, standings) {
   const slotMatches = slots
     .slice()
     .sort((a, b) => a.t - b.t)
-    .map((s) => bound.get(s.no) || placeholderTie(s, standings));
+    .map((s) => withMatchNo(bound.get(s.no), s) || placeholderTie(s, standings));
   // Any feed knockout fixture that didn't bind to a slot — keep it rather than
   // drop real data.
   const leftovers = ko.filter((f) => !usedFixtures.has(f.id));
