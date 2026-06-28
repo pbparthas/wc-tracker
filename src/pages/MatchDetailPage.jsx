@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import Flag from "../components/Flag.jsx";
 import StatusPill from "../components/StatusPill.jsx";
@@ -15,6 +15,7 @@ import { istParts } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
 import { stadiumFor } from "../data/stadiums.js";
 import { useWeather } from "../hooks/useWeather.js";
+import { mergeKnockoutSchedule } from "../lib/bracket.js";
 import { previewPrompt, recapPrompt, h2hPrompt } from "../lib/prompts.js";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -29,6 +30,13 @@ export default function MatchDetailPage() {
   const match = schedMatch && summary?.match
     ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag }
     : schedMatch || summary?.match || null;
+
+  // The FIFA match number, derived by binding this match to its knockout slot —
+  // matches the "Match 76" shown on the bracket and Matches-tab cards.
+  const koMatchNo = useMemo(
+    () => mergeKnockoutSchedule(matches, standings).find((m) => m.id === id)?.matchNo ?? null,
+    [matches, standings, id]
+  );
 
   const preview = useAiContent("preview2:" + id, () => previewPrompt(match, standings));
   const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
@@ -77,7 +85,7 @@ export default function MatchDetailPage() {
 
       <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: live ? "var(--live)" : undefined }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-          <span className="eyebrow">{match.stage}{match.city ? " · " + match.city : ""}</span>
+          <span className="eyebrow">{match.stage}{koMatchNo ? " · Match " + koMatchNo : ""}{match.city ? " · " + match.city : ""}</span>
           <StatusPill status={match.status} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8, textAlign: "center" }}>
