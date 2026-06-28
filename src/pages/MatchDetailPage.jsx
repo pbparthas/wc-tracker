@@ -36,8 +36,11 @@ export default function MatchDetailPage() {
   const wx = useWeather(match?.id, match?.city, match?.kickoff, match?.state);
 
   const upcoming = match?.state === "pre";
-  const { predictions } = usePredictions(upcoming ? match?.id : null);
-  const { injuries } = useInjuries(upcoming || match?.state === "in" ? match?.id : null);
+  // Keep the pre-match win probability visible once the match is live too — it's
+  // useful context during play, not just before kickoff.
+  const showPredictions = upcoming || match?.state === "in";
+  const { predictions } = usePredictions(showPredictions ? match?.id : null);
+  const { injuries } = useInjuries(showPredictions ? match?.id : null);
 
   const tabs = match ? [
     { id: "overview", label: "Overview" },
@@ -135,7 +138,7 @@ export default function MatchDetailPage() {
       {activeTab === "overview" && (
         <>
           {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
-          {upcoming && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} />}
+          {showPredictions && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} />}
           {(upcoming || match.state === "in") && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} homeId={match.apifHomeId} awayId={match.apifAwayId} />}
           {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
