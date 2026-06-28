@@ -224,11 +224,14 @@ async function fetchApifSummary(fixtureId) {
       isPre ? [] : apif.fetchPlayerStats(fixtureId).catch(() => []),
     ]);
 
-    // Fetch ESPN commentary in the background (non-blocking); none exists pre-match.
-    const espnCommentaryPromise = isPre
+    // Pull the matching ESPN summary in the background. API-Football can lag on
+    // live timeline/stats (a 0-0 mid-match often has neither yet), so we use
+    // ESPN's events/stats to fill in when ours are empty — plus its commentary,
+    // which API-Football doesn't provide at all. None of this exists pre-match.
+    const espnSummaryPromise = isPre
       ? Promise.resolve(null)
       : findEspnId(fixture).then((espnId) =>
-          espnId ? espn.fetchSummary(espnId).then((s) => s.commentary).catch(() => null) : null
+          espnId ? espn.fetchSummary(espnId).catch(() => null) : null
         );
 
     const homeTeam = resolveApifTeam(fixture.home);
@@ -366,8 +369,14 @@ async function fetchApifSummary(fixtureId) {
       referee: fixture.referee || "",
     };
 
-    // Commentary from ESPN (best-effort, non-blocking)
-    out.commentary = await espnCommentaryPromise;
+    // ESPN supplement (best-effort): fill the timeline and stats when
+    // API-Football hasn't populated them yet, and add commentary.
+    const espnSummary = await espnSummaryPromise;
+    if (espnSummary) {
+      if (!out.events?.length && espnSummary.events?.length) out.events = espnSummary.events;
+      if (!out.stats?.length && espnSummary.stats?.length) out.stats = espnSummary.stats;
+      out.commentary = espnSummary.commentary || null;
+    }
 
     return out;
   } catch {

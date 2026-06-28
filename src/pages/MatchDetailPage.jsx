@@ -65,8 +65,11 @@ export default function MatchDetailPage() {
   const p = istParts(match.kickoff);
   const live = match.state === "in";
 
+  // minHeight on the wrap keeps the whole screen swipeable even when a tab's
+  // content is short (e.g. "Timeline not available yet."), so the tab-swipe
+  // gesture still fires in the empty area below.
   return (
-    <div className="wrap" style={{ paddingTop: 14 }} {...swipe}>
+    <div className="wrap" style={{ paddingTop: 14, minHeight: "85vh" }} {...swipe}>
       <Link to="/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
 
       <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: live ? "var(--live)" : undefined }}>
