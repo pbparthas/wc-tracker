@@ -430,7 +430,11 @@ export async function fetchTopScorers() {
 
 /* ── League-mode helpers (EPL etc.) ──────────────────────────────── */
 
-const APIF_LEAGUE_MAP = { "soccer/eng.1": { id: 39, season: 2026 } };
+const APIF_LEAGUE_MAP = {
+  "soccer/eng.1": { id: 39, season: 2026 },  // Premier League
+  "soccer/esp.1": { id: 140, season: 2026 }, // La Liga
+  "soccer/ger.1": { id: 78, season: 2026 },  // Bundesliga
+};
 
 function apifLeagueFor(espnSlug) {
   return APIF_LEAGUE_MAP[espnSlug] || null;

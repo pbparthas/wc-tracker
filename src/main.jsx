@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { createHashRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider, Navigate } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
 
 import "@fontsource/inter/400.css";
@@ -81,12 +81,15 @@ const router = createHashRouter([
       { path: "team/:code", element: <TeamPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "settings/api-compare", element: <ApiCompare /> },
-      { path: "epl", element: <TransfersPage /> },
-      { path: "epl/matches", element: <EplMatchesPage /> },
-      { path: "epl/table", element: <TablePage /> },
-      { path: "epl/clubs", element: <ClubsPage /> },
-      { path: "epl/club/:id", element: <ClubPage /> },
-      { path: "epl/match/:id", element: <EplMatchDetailPage /> },
+      { path: "league/:comp", element: <TransfersPage /> },
+      { path: "league/:comp/matches", element: <EplMatchesPage /> },
+      { path: "league/:comp/table", element: <TablePage /> },
+      { path: "league/:comp/clubs", element: <ClubsPage /> },
+      { path: "league/:comp/club/:id", element: <ClubPage /> },
+      { path: "league/:comp/match/:id", element: <EplMatchDetailPage /> },
+      /* Back-compat: old /epl links → the Premier League under the generic path. */
+      { path: "epl", element: <Navigate to="/league/epl" replace /> },
+      { path: "epl/*", element: <Navigate to="/league/epl" replace /> },
     ],
   },
 ]);

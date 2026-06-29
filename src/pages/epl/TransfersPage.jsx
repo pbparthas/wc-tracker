@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import AiCard from "../../components/AiCard.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchLeagueClubs, fetchLeagueTransfers } from "../../lib/datasource.js";
@@ -8,16 +9,15 @@ import { useAiContent } from "../../hooks/useAiContent.js";
 import { transferDigestPrompt, confirmedMovesPrompt, rumorMillPrompt } from "../../lib/prompts.js";
 import { istDateKey, IST } from "../../lib/time.js";
 
-const EPL = COMPETITIONS.epl;
 const HOUR = 60 * 60 * 1000;
 
-function WindowBar() {
+function WindowBar({ window: win }) {
   const [, tick] = useState(0);
   useEffect(() => {
     const t = setInterval(() => tick((x) => x + 1), 60 * 1000);
     return () => clearInterval(t);
   }, []);
-  const closes = new Date(EPL.window.closesIso);
+  const closes = new Date(win.closesIso);
   const msLeft = closes.getTime() - Date.now();
   const closesIst = closes.toLocaleString("en-IN", {
     timeZone: IST, day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
@@ -25,7 +25,7 @@ function WindowBar() {
   if (msLeft <= 0) {
     return (
       <div className="card" style={{ padding: 14, marginBottom: 10 }}>
-        <div className="eyebrow">{EPL.window.label}</div>
+        <div className="eyebrow">{win.label}</div>
         <div className="disp" style={{ fontSize: 22, fontWeight: 800, color: "var(--muted)" }}>WINDOW CLOSED</div>
       </div>
     );
@@ -38,7 +38,7 @@ function WindowBar() {
       borderColor: deadlineDay ? "var(--live)" : finalWeek ? "var(--saffron)" : undefined,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span className="eyebrow">{EPL.window.label}</span>
+        <span className="eyebrow">{win.label}</span>
         <span className="eyebrow" style={{ color: deadlineDay ? "var(--live)" : "var(--saffron)" }}>
           {deadlineDay && <span className="pulse">● </span>}OPEN
         </span>
@@ -60,11 +60,13 @@ function WindowBar() {
 }
 
 export default function TransfersPage() {
-  const { data: moves, loading, error, refresh } = useCached("transfers:epl:af", 30 * 60 * 1000, () =>
-    fetchLeagueTransfers(EPL.slug, { sinceIso: EPL.window.opensIso })
+  const { comp } = useParams();
+  const C = COMPETITIONS[comp] || COMPETITIONS.epl;
+  const { data: moves, loading, error, refresh } = useCached(`transfers:${C.id}:af`, 30 * 60 * 1000, () =>
+    fetchLeagueTransfers(C.slug, { sinceIso: C.window.opensIso })
   );
-  const { data: clubs } = useCached("clubs:epl:af", 7 * 24 * HOUR, () => fetchLeagueClubs(EPL.slug));
-  const { favs } = useFavorites("epl");
+  const { data: clubs } = useCached(`clubs:${C.id}:af`, 7 * 24 * HOUR, () => fetchLeagueClubs(C.slug));
+  const { favs } = useFavorites(C.id);
   const [mine, setMine] = useState(false);
   const [showFeed, setShowFeed] = useState(false);
 
@@ -73,20 +75,20 @@ export default function TransfersPage() {
     .filter(Boolean);
 
   const digest = useAiContent(
-    "transferDigest3:epl:" + istDateKey(),
-    () => transferDigestPrompt(EPL.name),
+    `transferDigest3:${C.id}:` + istDateKey(),
+    () => transferDigestPrompt(C.name),
     { ttlMs: 6 * HOUR, grounding: true }
   );
 
   const rumors = useAiContent(
-    "transferRumors2:epl:" + istDateKey(),
-    () => rumorMillPrompt(EPL.name),
+    `transferRumors2:${C.id}:` + istDateKey(),
+    () => rumorMillPrompt(C.name),
     { ttlMs: 6 * HOUR, grounding: true }
   );
 
   const movesAi = useAiContent(
-    "transferMoves2:epl:" + istDateKey(),
-    () => confirmedMovesPrompt(EPL.name),
+    `transferMoves2:${C.id}:` + istDateKey(),
+    () => confirmedMovesPrompt(C.name),
     { ttlMs: 6 * HOUR, grounding: true }
   );
 
@@ -101,13 +103,13 @@ export default function TransfersPage() {
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8 }}>
-        <span className="eyebrow">{EPL.flag} {EPL.name} · transfers</span>
+        <span className="eyebrow">{C.flag} {C.name} · transfers</span>
         <button className="iconbtn" style={{ fontSize: 14, padding: "6px 12px" }} onClick={refresh} disabled={loading} aria-label="Refresh transfers">
           {loading ? "…" : "↻"}
         </button>
       </div>
 
-      <WindowBar />
+      <WindowBar window={C.window} />
 
       <AiCard
         title="Today's transfer digest"
@@ -148,6 +150,12 @@ export default function TransfersPage() {
           <span>Transfer feed · {moves.length} moves</span>
           <span className="ai-chev">{showFeed ? "▾ hide" : "▸ show"}</span>
         </button>
+      )}
+
+      {!feedDown && moves && moves.length === 0 && (
+        <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+          Structured feed: no deals catalogued in API-Football for this window yet — the AI summary above has the latest.
+        </p>
       )}
 
       {feedDown && (

@@ -16,14 +16,14 @@ import { cacheGet, cacheSet } from "../../lib/storage.js";
 import { istParts } from "../../lib/time.js";
 import { leaguePreviewPrompt, leagueRecapPrompt } from "../../lib/prompts.js";
 
-const EPL = COMPETITIONS.epl;
-
 export default function EplMatchDetailPage() {
-  const { id } = useParams();
+  const { comp, id } = useParams();
+  const C = COMPETITIONS[comp] || COMPETITIONS.epl;
+  const sumKey = `sum:${C.id}:` + id;
   const [tab, setTab] = useState("overview");
-  const { data: allMatches } = useCached("eplmatches", 10 * 60 * 1000, () => fetchLeagueMatches(EPL.slug));
+  const { data: allMatches } = useCached(`matches:${C.id}`, 10 * 60 * 1000, () => fetchLeagueMatches(C.slug));
 
-  const [summary, setSummary] = useState(() => cacheGet("sum:epl:" + id));
+  const [summary, setSummary] = useState(() => cacheGet(sumKey));
   const [loading, setLoading] = useState(false);
 
   const schedMatch = (allMatches || []).find((m) => m.id === id);
@@ -36,31 +36,31 @@ export default function EplMatchDetailPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const s = await fetchLeagueSummary(id, EPL.slug);
+      const s = await fetchLeagueSummary(id, C.slug);
       setSummary(s);
-      if (state === "post") cacheSet("sum:epl:" + id, s);
-      else cacheSet("sum:epl:" + id, s, 5 * 60 * 1000);
+      if (state === "post") cacheSet(sumKey, s);
+      else cacheSet(sumKey, s, 5 * 60 * 1000);
     } catch { /* summary unavailable */ }
     setLoading(false);
-  }, [id, state]);
+  }, [id, state, sumKey, C.slug]);
 
   useEffect(() => {
-    if (!(state === "post" && cacheGet("sum:epl:" + id))) load();
+    if (!(state === "post" && cacheGet(sumKey))) load();
     if (state !== "in" && state !== "pre") return undefined;
     const t = setInterval(() => { if (!document.hidden) load(); }, state === "in" ? 60000 : 5 * 60 * 1000);
     return () => clearInterval(t);
-  }, [state, load, id]);
+  }, [state, load, sumKey]);
 
   useResume(() => { if (state === "in" || state === "pre") load(); });
 
   const preview = useAiContent(
-    "eplPreview:" + id,
-    () => match && leaguePreviewPrompt(match, EPL.name),
+    `${C.id}Preview:` + id,
+    () => match && leaguePreviewPrompt(match, C.name),
     { ttlMs: 7 * 24 * 60 * 60 * 1000, grounding: true }
   );
   const recap = useAiContent(
-    "eplRecap:" + id,
-    () => match && leagueRecapPrompt(match, summary, EPL.name),
+    `${C.id}Recap:` + id,
+    () => match && leagueRecapPrompt(match, summary, C.name),
     { grounding: true }
   );
 
@@ -87,7 +87,7 @@ export default function EplMatchDetailPage() {
           <p className="pulse" style={{ color: "var(--muted)" }}>Loading match…</p>
         ) : (
           <p style={{ color: "var(--muted)" }}>
-            Match not found. <Link to="/epl/matches">Back to matches</Link>
+            Match not found. <Link to={`/league/${C.id}/matches`}>Back to matches</Link>
           </p>
         )}
       </div>
@@ -99,7 +99,7 @@ export default function EplMatchDetailPage() {
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }} {...swipe}>
-      <Link to="/epl/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
+      <Link to={`/league/${C.id}/matches`} style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
 
       <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: live ? "var(--live)" : undefined }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>

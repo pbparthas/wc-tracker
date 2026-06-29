@@ -12,7 +12,7 @@ export default function App() {
   }, [pathname]);
 
   return (
-    <div className="app" data-comp={pathname.startsWith("/epl") ? "epl" : "wc"}>
+    <div className="app" data-comp={pathname.match(/^\/league\/([^/]+)/)?.[1] || "wc"}>
       <header className="hdr">
         <div className="hdr-inner">
           <Link to="/" className="hdr-title disp">

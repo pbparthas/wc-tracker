@@ -1,10 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { COMPETITIONS } from "../data/competitions.js";
 
-const LEAGUES = [
-  ["🇪🇸", "La Liga"],
+/* Club leagues that are live in the app (transfers + table + clubs + matches). */
+const CLUB_LEAGUES = ["epl", "laliga", "bundesliga"];
+
+const COMING_SOON = [
   ["🇮🇹", "Serie A"],
-  ["🇩🇪", "Bundesliga"],
   ["🇫🇷", "Ligue 1"],
   ["⭐", "Champions League"],
 ];
@@ -44,29 +46,41 @@ export default function HomePage() {
 
       <div className="eyebrow" style={{ margin: "16px 0 8px" }}>Club football</div>
 
-      <div
-        className="card"
-        role="link"
-        tabIndex={0}
-        onClick={() => navigate("/epl")}
-        onKeyDown={(e) => e.key === "Enter" && navigate("/epl")}
-        style={{ padding: 16, marginBottom: 8, cursor: "pointer", background: "linear-gradient(180deg,#241a3d 0%,#181229 100%)" }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span className="eyebrow" style={{ color: "#bfb3d9" }}>England · 2026-27</span>
-          <span className="eyebrow" style={{ color: "#00e586" }}>
-            <span className="pulse">●</span> Window open
-          </span>
-        </div>
-        <div className="disp" style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 2px" }}>
-          🏴󠁧󠁢󠁥󠁮󠁧󠁿 PREMIER LEAGUE
-        </div>
-        <div style={{ fontSize: 13, color: "var(--muted)" }}>
-          Transfer window live · squads · clubs · table — fixtures land mid-June
-        </div>
-      </div>
+      {CLUB_LEAGUES.map((id) => {
+        const c = COMPETITIONS[id];
+        if (!c) return null;
+        const open = !!c.window?.closesIso && Date.now() < new Date(c.window.closesIso).getTime();
+        return (
+          <div
+            key={id}
+            className="card"
+            role="link"
+            tabIndex={0}
+            onClick={() => navigate(`/league/${id}`)}
+            onKeyDown={(e) => e.key === "Enter" && navigate(`/league/${id}`)}
+            style={{ padding: 16, marginBottom: 8, cursor: "pointer", background: "linear-gradient(180deg,#241a3d 0%,#181229 100%)" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="eyebrow" style={{ color: "#bfb3d9" }}>{c.season.label}</span>
+              {open && (
+                <span className="eyebrow" style={{ color: "#00e586" }}>
+                  <span className="pulse">●</span> Window open
+                </span>
+              )}
+            </div>
+            <div className="disp" style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 2px" }}>
+              {c.flag} {c.name.toUpperCase()}
+            </div>
+            <div style={{ fontSize: 13, color: "var(--muted)" }}>
+              Transfers · squads · clubs · table — fixtures land before kickoff
+            </div>
+          </div>
+        );
+      })}
 
-      {LEAGUES.map(([flag, name]) => (
+      <div style={{ height: 8 }} />
+
+      {COMING_SOON.map(([flag, name]) => (
         <div
           key={name}
           className="card"

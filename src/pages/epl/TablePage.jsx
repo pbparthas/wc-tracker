@@ -1,16 +1,15 @@
 import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import LeadersList from "../../components/LeadersList.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchLeagueTable, fetchLeagueScorers, fetchLeagueAssists } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 
-const EPL = COMPETITIONS.epl;
 const HALF_HOUR = 30 * 60 * 1000;
 
 /* Zone colors: CL / EL / Conference / relegation. The fifth CL spot is
    coefficient-dependent — footnoted as approximate. */
-function zoneOf(pos) {
-  const z = EPL.zones;
+function zoneOf(pos, z) {
   if (pos <= z.ucl) return ["var(--saffron)", "Champions League"];
   if (pos <= z.uel) return ["var(--gold)", "Europa League"];
   if (pos <= z.conf) return ["#7FB5FF", "Conference League"];
@@ -43,18 +42,20 @@ const VIEWS = [
 ];
 
 export default function TablePage() {
+  const { comp } = useParams();
+  const C = COMPETITIONS[comp] || COMPETITIONS.epl;
   const [view, setView] = useState("table");
-  const { data, loading, error, refresh } = useCached("table:epl", HALF_HOUR, () =>
-    fetchLeagueTable(EPL.slug)
+  const { data, loading, error, refresh } = useCached(`table:${C.id}`, HALF_HOUR, () =>
+    fetchLeagueTable(C.slug)
   );
-  const scorers = useCached("scorers:epl", HALF_HOUR, () => fetchLeagueScorers(EPL.slug));
-  const assists = useCached("assists:epl", HALF_HOUR, () => fetchLeagueAssists(EPL.slug));
+  const scorers = useCached(`scorers:${C.id}`, HALF_HOUR, () => fetchLeagueScorers(C.slug));
+  const assists = useCached(`assists:${C.id}`, HALF_HOUR, () => fetchLeagueAssists(C.slug));
 
   return (
     <div className="wrap" style={{ paddingTop: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span className="eyebrow">
-          {EPL.flag} {EPL.name}{data?.season ? ` · ${data.season}` : ""}
+          {C.flag} {C.name}{data?.season ? ` · ${data.season}` : ""}
         </span>
         <button className="iconbtn" style={{ fontSize: 14, padding: "6px 12px" }} onClick={refresh} disabled={loading} aria-label="Refresh table">
           {loading ? "…" : "↻"}
@@ -71,11 +72,11 @@ export default function TablePage() {
 
       {view === "scorers" && (
         <LeadersList rows={scorers.data} metric="goals" loading={scorers.loading} error={scorers.error}
-          emptyNote={`Top scorers fill in once the ${EPL.season.label} season kicks off.`} />
+          emptyNote={`Top scorers fill in once the ${C.season.label} season kicks off.`} />
       )}
       {view === "assists" && (
         <LeadersList rows={assists.data} metric="assists" loading={assists.loading} error={assists.error}
-          emptyNote={`Assist leaders fill in once the ${EPL.season.label} season kicks off.`} />
+          emptyNote={`Assist leaders fill in once the ${C.season.label} season kicks off.`} />
       )}
 
       {view === "table" && (<>
@@ -83,7 +84,7 @@ export default function TablePage() {
       {loading && !data && <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading table…</p>}
       {error && !data && (
         <div className="card" style={{ padding: 14, fontSize: 13, color: "var(--muted)" }}>
-          The league table isn't available right now ({error}). The {EPL.season.label} table fills in once the season kicks off.
+          The league table isn't available right now ({error}). The {C.season.label} table fills in once the season kicks off.
         </div>
       )}
 
@@ -97,7 +98,7 @@ export default function TablePage() {
             </thead>
             <tbody>
               {data.rows.map((r, i) => {
-                const [color] = zoneOf(i + 1);
+                const [color] = zoneOf(i + 1, C.zones);
                 return (
                   <tr key={r.team.espnId || r.team.name}>
                     <td style={{ color: "var(--muted)" }}>

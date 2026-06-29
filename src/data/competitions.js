@@ -18,6 +18,32 @@ export const COMPETITIONS = {
        the Europa/Conference spots — footnoted as approximate in the UI. */
     zones: { ucl: 5, uel: 6, conf: 7, releg: 17 },
   },
+  laliga: {
+    id: "laliga",
+    name: "La Liga",
+    flag: "🇪🇸",
+    slug: "soccer/esp.1",
+    season: { label: "2026-27", fixturesNote: "Fixtures are usually released in mid-July." },
+    window: {
+      label: "Summer transfer window",
+      opensIso: "2026-06-01T00:00:00Z",
+      closesIso: "2026-09-01T22:00:00Z",
+    },
+    zones: { ucl: 5, uel: 6, conf: 7, releg: 17 }, // 20 teams; European spots approximate
+  },
+  bundesliga: {
+    id: "bundesliga",
+    name: "Bundesliga",
+    flag: "🇩🇪",
+    slug: "soccer/ger.1",
+    season: { label: "2026-27", fixturesNote: "Fixtures are usually released in late June." },
+    window: {
+      label: "Summer transfer window",
+      opensIso: "2026-06-01T00:00:00Z",
+      closesIso: "2026-09-01T20:00:00Z",
+    },
+    zones: { ucl: 4, uel: 6, conf: 7, releg: 15 }, // 18 teams; 16th is the relegation play-off
+  },
 };
 
 export function windowOpen(comp) {

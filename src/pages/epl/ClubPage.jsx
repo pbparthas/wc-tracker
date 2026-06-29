@@ -10,16 +10,15 @@ import { useFavorites } from "../../hooks/useFavorites.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
 import { clubPrompt } from "../../lib/prompts.js";
 
-const EPL = COMPETITIONS.epl;
 const DAY = 24 * 60 * 60 * 1000;
 
-function PositionBadge({ pos }) {
+function PositionBadge({ pos, zones, seasonLabel }) {
   let color = "var(--muted)";
   let label = "";
-  if (pos <= EPL.zones.ucl) { color = "#2563eb"; label = "UCL"; }
-  else if (pos <= EPL.zones.uel) { color = "#f97316"; label = "UEL"; }
-  else if (pos <= EPL.zones.conf) { color = "#22c55e"; label = "UECL"; }
-  else if (pos > EPL.zones.releg) { color = "var(--live)"; label = "REL"; }
+  if (pos <= zones.ucl) { color = "#2563eb"; label = "UCL"; }
+  else if (pos <= zones.uel) { color = "#f97316"; label = "UEL"; }
+  else if (pos <= zones.conf) { color = "#22c55e"; label = "UECL"; }
+  else if (pos > zones.releg) { color = "var(--live)"; label = "REL"; }
   return (
     <div style={{
       display: "inline-flex", alignItems: "center", gap: 6,
@@ -29,21 +28,22 @@ function PositionBadge({ pos }) {
       <span className="disp" style={{ fontSize: 22, fontWeight: 800, color }}>{pos}</span>
       <div style={{ fontSize: 11, color: "var(--muted)" }}>
         <div style={{ fontWeight: 600 }}>{label || `${pos}th`}</div>
-        <div>2025-26</div>
+        <div>{seasonLabel}</div>
       </div>
     </div>
   );
 }
 
 export default function ClubPage() {
-  const { id } = useParams();
-  const { data: clubs } = useCached("clubs:epl:af", 7 * DAY, () => fetchLeagueClubs(EPL.slug));
-  const { data: moves } = useCached("clubtransfers:epl:" + id, 30 * 60 * 1000, () =>
-    fetchClubTransfers(EPL.slug, id, { sinceIso: EPL.window.opensIso })
+  const { comp, id } = useParams();
+  const C = COMPETITIONS[comp] || COMPETITIONS.epl;
+  const { data: clubs } = useCached(`clubs:${C.id}:af`, 7 * DAY, () => fetchLeagueClubs(C.slug));
+  const { data: moves } = useCached(`clubtransfers:${C.id}:` + id, 30 * 60 * 1000, () =>
+    fetchClubTransfers(C.slug, id, { sinceIso: C.window.opensIso })
   );
-  const { data: table } = useCached("table:epl", DAY, () => fetchLeagueTable(EPL.slug));
-  const squad = useCached("squad:epl:" + id, DAY, () => fetchClubSquad(EPL.slug, id));
-  const { favs, toggle } = useFavorites("epl");
+  const { data: table } = useCached(`table:${C.id}`, DAY, () => fetchLeagueTable(C.slug));
+  const squad = useCached(`squad:${C.id}:` + id, DAY, () => fetchClubSquad(C.slug, id));
+  const { favs, toggle } = useFavorites(C.id);
   const [picked, setPicked] = useState(null);
 
   const club = (clubs || []).find((c) => c.id === id);
@@ -55,7 +55,7 @@ export default function ClubPage() {
   const tableRow = table?.rows?.find((r) => r.team.espnId === id || r.team.name === club?.name);
   const tablePos = tableRow ? table.rows.indexOf(tableRow) + 1 : null;
 
-  const profile = useAiContent("club:epl:" + id, () => clubPrompt(club, clubMoves), {
+  const profile = useAiContent(`club:${C.id}:` + id, () => clubPrompt(club, clubMoves), {
     ttlMs: DAY,
     grounding: true,
   });
@@ -64,7 +64,7 @@ export default function ClubPage() {
     return (
       <div className="wrap" style={{ paddingTop: 20 }}>
         <p className="pulse" style={{ color: "var(--muted)" }}>
-          Loading club… <Link to="/epl/clubs">All clubs</Link>
+          Loading club… <Link to={`/league/${C.id}/clubs`}>All clubs</Link>
         </p>
       </div>
     );
@@ -90,7 +90,7 @@ export default function ClubPage() {
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
-      <Link to="/epl/clubs" style={{ fontSize: 13, textDecoration: "none" }}>← All clubs</Link>
+      <Link to={`/league/${C.id}/clubs`} style={{ fontSize: 13, textDecoration: "none" }}>← All clubs</Link>
 
       <div className="card" style={{ padding: 16, margin: "10px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -98,7 +98,7 @@ export default function ClubPage() {
             {club.logo && <img src={club.logo} alt="" width={44} height={44} style={{ objectFit: "contain" }} />}
             <div>
               <div className="disp" style={{ fontSize: 22, fontWeight: 800 }}>{club.name.toUpperCase()}</div>
-              <div className="eyebrow">{EPL.name} · {EPL.season.label}</div>
+              <div className="eyebrow">{C.name} · {C.season.label}</div>
             </div>
           </div>
           <button
@@ -112,7 +112,7 @@ export default function ClubPage() {
 
         {(tablePos || tableRow) && (
           <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-            {tablePos && <PositionBadge pos={tablePos} />}
+            {tablePos && <PositionBadge pos={tablePos} zones={C.zones} seasonLabel={C.season.label} />}
             {tableRow && (
               <div style={{ fontSize: 12, color: "var(--muted)" }}>
                 P{tableRow.p} W{tableRow.w} D{tableRow.d} L{tableRow.l} ·{" "}
@@ -138,7 +138,7 @@ export default function ClubPage() {
       {ins.length === 0 && outs.length === 0 && (
         <div className="card" style={{ padding: 12, marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
           No confirmed moves this window yet. Check the{" "}
-          <Link to="/epl">transfers page</Link> for the latest deals and rumors.
+          <Link to={`/league/${C.id}`}>transfers page</Link> for the latest deals and rumors.
         </div>
       )}
 
@@ -148,11 +148,11 @@ export default function ClubPage() {
       </div>
 
       <p style={{ fontSize: 12, color: "var(--muted)", margin: "12px 0 20px" }}>
-        {EPL.season.label} fixtures and results will appear once the schedule is released.
+        {C.season.label} fixtures and results will appear once the schedule is released.
       </p>
 
       {picked && (
-        <PlayerSheet player={picked} team={{ code: "epl:" + id, flag: "", name: club.name }} onClose={() => setPicked(null)} />
+        <PlayerSheet player={picked} team={{ code: `${C.id}:` + id, flag: "", name: club.name }} onClose={() => setPicked(null)} />
       )}
     </div>
   );

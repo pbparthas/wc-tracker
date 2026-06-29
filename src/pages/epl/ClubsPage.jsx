@@ -1,17 +1,18 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchLeagueClubs } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 
-const EPL = COMPETITIONS.epl;
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 export default function ClubsPage() {
   const navigate = useNavigate();
-  const { data: clubs, loading, error, refresh } = useCached("clubs:epl:af", WEEK, () => fetchLeagueClubs(EPL.slug));
-  const { favs } = useFavorites("epl");
+  const { comp } = useParams();
+  const C = COMPETITIONS[comp] || COMPETITIONS.epl;
+  const { data: clubs, loading, error, refresh } = useCached(`clubs:${C.id}:af`, WEEK, () => fetchLeagueClubs(C.slug));
+  const { favs } = useFavorites(C.id);
 
   return (
     <div className="wrap" style={{ paddingTop: 16 }}>
@@ -30,7 +31,7 @@ export default function ClubsPage() {
         {(clubs || []).map((c) => (
           <button
             key={c.id}
-            onClick={() => navigate(`/epl/club/${c.id}`)}
+            onClick={() => navigate(`/league/${C.id}/club/${c.id}`)}
             className="club-row"
             style={{ borderColor: favs.includes(c.id) ? "var(--saffron)" : "var(--line)" }}
           >

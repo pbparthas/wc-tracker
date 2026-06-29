@@ -11,16 +11,18 @@ const WC_TABS = [
 ];
 
 /* Transfers lead while the window is open; matches take over for the season. */
-const eplTabs = () => {
-  const order = windowOpen("epl")
-    ? [["/epl", "TRANSFERS"], ["/epl/matches", "MATCHES"]]
-    : [["/epl/matches", "MATCHES"], ["/epl", "TRANSFERS"]];
-  return [["/", "⌂"], ...order, ["/epl/table", "TABLE"], ["/epl/clubs", "CLUBS"]];
+const leagueTabs = (comp) => {
+  const base = `/league/${comp}`;
+  const order = windowOpen(comp)
+    ? [[base, "TRANSFERS"], [`${base}/matches`, "MATCHES"]]
+    : [[`${base}/matches`, "MATCHES"], [base, "TRANSFERS"]];
+  return [["/", "⌂"], ...order, [`${base}/table`, "TABLE"], [`${base}/clubs`, "CLUBS"]];
 };
 
 export default function BottomTabs() {
   const { pathname } = useLocation();
-  const tabs = pathname.startsWith("/epl") ? eplTabs() : WC_TABS;
+  const comp = pathname.match(/^\/league\/([^/]+)/)?.[1];
+  const tabs = comp ? leagueTabs(comp) : WC_TABS;
   return (
     <nav className="tabs" aria-label="Sections">
       <div className="tabs-inner">
@@ -28,7 +30,9 @@ export default function BottomTabs() {
           <NavLink
             key={to}
             to={to}
-            end={to === "/" || to === "/epl"}
+            // Exact-match the home and the league base (Transfers) so they
+            // don't stay highlighted on sub-routes.
+            end={to === "/" || /^\/league\/[^/]+$/.test(to)}
             className={({ isActive }) => "tab" + (to === "/" ? " home" : "") + (isActive ? " on" : "")}
           >
             {label}

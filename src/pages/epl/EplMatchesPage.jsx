@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import MatchRow from "../../components/MatchRow.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchLeagueMatches } from "../../lib/datasource.js";
@@ -8,13 +8,13 @@ import { useFavorites } from "../../hooks/useFavorites.js";
 import { useResume } from "../../hooks/useResume.js";
 import { istParts, IST } from "../../lib/time.js";
 
-const EPL = COMPETITIONS.epl;
-
 export default function EplMatchesPage() {
+  const { comp } = useParams();
+  const C = COMPETITIONS[comp] || COMPETITIONS.epl;
   const { data: matches, loading, error, refresh } = useCached(
-    "eplmatches", 10 * 60 * 1000, () => fetchLeagueMatches(EPL.slug)
+    `matches:${C.id}`, 10 * 60 * 1000, () => fetchLeagueMatches(C.slug)
   );
-  const { favs } = useFavorites("epl");
+  const { favs } = useFavorites(C.id);
   useResume(() => refresh());
 
   const anyLive = (matches || []).some((m) => m.state === "in");
@@ -42,7 +42,7 @@ export default function EplMatchesPage() {
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8 }}>
-        <span className="eyebrow">{EPL.flag} {EPL.name} · matches</span>
+        <span className="eyebrow">{C.flag} {C.name} · matches</span>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {anyLive && <span className="pulse" style={{ color: "var(--live)", fontSize: 11, fontWeight: 700 }}>● LIVE</span>}
           <button className="iconbtn" style={{ fontSize: 14, padding: "6px 12px" }} onClick={() => refresh()} disabled={loading} aria-label="Refresh matches">
@@ -67,14 +67,14 @@ export default function EplMatchesPage() {
       {noFixtures && (
         <div className="card" style={{ padding: 16, marginBottom: 10 }}>
           <div className="disp" style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>
-            {EPL.flag} SEASON {EPL.season.label}
+            {C.flag} SEASON {C.season.label}
           </div>
           <p style={{ fontSize: 13, marginBottom: 8 }}>
-            {EPL.season.fixturesNote} Once the fixture list drops, this tab gets the full treatment:
+            {C.season.fixturesNote} Once the fixture list drops, this tab gets the full treatment:
             matchweek-by-matchweek fixtures in IST, live scores, stats, lineups and AI previews.
           </p>
           <p style={{ color: "var(--muted)", fontSize: 13 }}>
-            The transfer window is where the action is right now — <Link to="/epl">follow the transfers</Link>.
+            The transfer window is where the action is right now — <Link to={`/league/${C.id}`}>follow the transfers</Link>.
           </p>
         </div>
       )}
@@ -83,7 +83,7 @@ export default function EplMatchesPage() {
         <div key={g.label} style={{ marginBottom: 16 }}>
           <div className="eyebrow" style={{ marginBottom: 6 }}>{g.label}</div>
           {g.matches.map((m) => (
-            <MatchRow key={m.id} m={m} fav={isFav(m)} linkBase="/epl/match" />
+            <MatchRow key={m.id} m={m} fav={isFav(m)} linkBase={`/league/${C.id}/match`} />
           ))}
         </div>
       ))}
