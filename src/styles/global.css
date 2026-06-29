@@ -32,6 +32,18 @@
   --card: #181229;
   --line: rgba(230, 226, 240, 0.1);
 }
+[data-comp="seriea"] {
+  --saffron: #4a90e2;
+  --pitch: #2b1f42;
+  --card: #181229;
+  --line: rgba(230, 226, 240, 0.1);
+}
+[data-comp="ligue1"] {
+  --saffron: #16c8aa;
+  --pitch: #2b1f42;
+  --card: #181229;
+  --line: rgba(230, 226, 240, 0.1);
+}
 
 .zdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: baseline; }
 

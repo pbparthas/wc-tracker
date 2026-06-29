@@ -3,11 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { COMPETITIONS } from "../data/competitions.js";
 
 /* Club leagues that are live in the app (transfers + table + clubs + matches). */
-const CLUB_LEAGUES = ["epl", "laliga", "bundesliga"];
+const CLUB_LEAGUES = ["epl", "laliga", "bundesliga", "seriea", "ligue1"];
 
 const COMING_SOON = [
-  ["🇮🇹", "Serie A"],
-  ["🇫🇷", "Ligue 1"],
   ["⭐", "Champions League"],
 ];
 

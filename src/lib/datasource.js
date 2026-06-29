@@ -434,6 +434,8 @@ const APIF_LEAGUE_MAP = {
   "soccer/eng.1": { id: 39, season: 2026 },  // Premier League
   "soccer/esp.1": { id: 140, season: 2026 }, // La Liga
   "soccer/ger.1": { id: 78, season: 2026 },  // Bundesliga
+  "soccer/ita.1": { id: 135, season: 2026 }, // Serie A
+  "soccer/fra.1": { id: 61, season: 2026 },  // Ligue 1
 };
 
 function apifLeagueFor(espnSlug) {

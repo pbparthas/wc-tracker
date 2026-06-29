@@ -44,6 +44,32 @@ export const COMPETITIONS = {
     },
     zones: { ucl: 4, uel: 6, conf: 7, releg: 15 }, // 18 teams; 16th is the relegation play-off
   },
+  seriea: {
+    id: "seriea",
+    name: "Serie A",
+    flag: "🇮🇹",
+    slug: "soccer/ita.1",
+    season: { label: "2026-27", fixturesNote: "Fixtures are usually released in mid-July." },
+    window: {
+      label: "Summer transfer window",
+      opensIso: "2026-06-01T00:00:00Z",
+      closesIso: "2026-09-01T18:00:00Z",
+    },
+    zones: { ucl: 5, uel: 6, conf: 7, releg: 17 }, // 20 teams; European spots approximate
+  },
+  ligue1: {
+    id: "ligue1",
+    name: "Ligue 1",
+    flag: "🇫🇷",
+    slug: "soccer/fra.1",
+    season: { label: "2026-27", fixturesNote: "Fixtures are usually released in mid-July." },
+    window: {
+      label: "Summer transfer window",
+      opensIso: "2026-06-01T00:00:00Z",
+      closesIso: "2026-09-01T20:00:00Z",
+    },
+    zones: { ucl: 4, uel: 5, conf: 6, releg: 15 }, // 18 teams; 16th is the relegation play-off
+  },
 };
 
 export function windowOpen(comp) {
