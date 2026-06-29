@@ -530,6 +530,51 @@ export async function fetchClubSquad(espnSlug, teamId) {
   return apif.fetchSquad(teamId);
 }
 
+/* League-wide transfer feed for the current window. API-Football's /transfers is
+   per-team only, so we fan out across the league's clubs and merge (a deal shows
+   in both clubs' feeds — dedup it). ESPN is the fallback when API-Football's
+   club list is unavailable. */
+export async function fetchLeagueTransfers(espnSlug, { sinceIso } = {}) {
+  const al = apifLeagueFor(espnSlug);
+  if (al) {
+    try {
+      const clubs = await apif.fetchTeams(al.id, al.season);
+      if (clubs.length) {
+        const since = sinceIso ? new Date(sinceIso).getTime() : 0;
+        const settled = await Promise.allSettled(clubs.map((c) => apif.fetchTransfers(c.id)));
+        const seen = new Set();
+        const moves = [];
+        for (const r of settled) {
+          if (r.status !== "fulfilled") continue;
+          for (const t of r.value) {
+            const d = new Date(t.date).getTime();
+            if (since && (isNaN(d) || d < since)) continue;
+            const key = `${t.playerId || t.player}|${t.date}|${t.inId}|${t.outId}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            moves.push({
+              player: t.player,
+              date: t.date,
+              from: t.outName,
+              to: t.inName,
+              fromId: t.outId,
+              toId: t.inId,
+              fromLogo: t.outLogo,
+              toLogo: t.inLogo,
+              fee: t.type && t.type !== "N/A" ? t.type : "",
+            });
+          }
+        }
+        // API-Football is authoritative here — return its result even if empty,
+        // rather than falling back to ESPN's differently-shaped feed.
+        moves.sort((a, b) => new Date(b.date) - new Date(a.date));
+        return moves;
+      }
+    } catch { /* fall back to ESPN */ }
+  }
+  return espn.fetchTransactions(espnSlug);
+}
+
 /* A club's transfers for the current window, mapped to the move shape the club
    page already renders (in = arriving, out = leaving). API-Football's per-team
    transfer feed is the whole history, so we keep only the current window. */

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AiCard from "../../components/AiCard.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchTransactions } from "../../lib/espn.js";
-import { fetchLeagueClubs } from "../../lib/datasource.js";
+import { fetchLeagueClubs, fetchLeagueTransfers } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
@@ -61,8 +60,8 @@ function WindowBar() {
 }
 
 export default function TransfersPage() {
-  const { data: moves, loading, error, refresh } = useCached("transfers:epl", 30 * 60 * 1000, () =>
-    fetchTransactions(EPL.slug)
+  const { data: moves, loading, error, refresh } = useCached("transfers:epl:af", 30 * 60 * 1000, () =>
+    fetchLeagueTransfers(EPL.slug, { sinceIso: EPL.window.opensIso })
   );
   const { data: clubs } = useCached("clubs:epl:af", 7 * 24 * HOUR, () => fetchLeagueClubs(EPL.slug));
   const { favs } = useFavorites("epl");
@@ -146,14 +145,14 @@ export default function TransfersPage() {
           onClick={() => setShowFeed((s) => !s)}
           style={{ width: "100%", padding: "8px 0", marginBottom: 8, fontSize: 12, color: "var(--muted)" }}
         >
-          <span>ESPN feed · {moves.length} moves</span>
+          <span>Transfer feed · {moves.length} moves</span>
           <span className="ai-chev">{showFeed ? "▾ hide" : "▸ show"}</span>
         </button>
       )}
 
       {feedDown && (
         <div className="card" style={{ padding: 12, marginBottom: 10, fontSize: 12, color: "var(--muted)" }}>
-          ESPN's transfer feed isn't answering ({error}).
+          The transfer feed isn't answering ({error}).
         </div>
       )}
 
@@ -180,7 +179,7 @@ export default function TransfersPage() {
         </p>
       )}
       <p style={{ fontSize: 11, color: "var(--muted)", margin: "10px 0 20px" }}>
-        AI features searched via your Gemini key · ESPN public feed
+        AI features searched via your Gemini key · data from API-Football
       </p>
     </div>
   );

@@ -90,7 +90,7 @@ export default function EplMatchesPage() {
 
       {matches?.length > 0 && (
         <p style={{ fontSize: 11, color: "var(--muted)", margin: "10px 0 20px" }}>
-          Updated {new Date().toLocaleTimeString("en-IN", { timeZone: IST })} IST · ESPN public feed
+          Updated {new Date().toLocaleTimeString("en-IN", { timeZone: IST })} IST · data from API-Football
           {anyLive ? " · auto-refreshes during live play" : ""}
         </p>
       )}

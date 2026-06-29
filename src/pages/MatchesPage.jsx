@@ -153,7 +153,7 @@ export default function MatchesPage() {
         {fetchedAt && (
           <p style={{ fontSize: 11, color: "var(--muted)", margin: "10px 0 20px" }}>
             Updated {fetchedAt.toLocaleTimeString("en-IN", { timeZone: IST })} IST
-            {stale ? " · some data is stale" : ""} · ESPN public feed · auto-refreshes during live play
+            {stale ? " · some data is stale" : ""} · data from API-Football · auto-refreshes during live play
           </p>
         )}
       </div>
