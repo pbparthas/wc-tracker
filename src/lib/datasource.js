@@ -530,6 +530,15 @@ export async function fetchClubSquad(espnSlug, teamId) {
   return apif.fetchSquad(teamId);
 }
 
+/* True when a transfer's date is on/after the window open — keeps last season's
+   deals out of the current window's feed. Undated moves are excluded. */
+export function isCurrentWindowMove(dateStr, sinceIso) {
+  if (!sinceIso) return true;
+  const d = new Date(dateStr).getTime();
+  const since = new Date(sinceIso).getTime();
+  return !isNaN(d) && !isNaN(since) && d >= since;
+}
+
 /* League-wide transfer feed for the current window. API-Football's /transfers is
    per-team only, so we fan out across the league's clubs and merge (a deal shows
    in both clubs' feeds — dedup it). ESPN is the fallback when API-Football's
@@ -540,15 +549,13 @@ export async function fetchLeagueTransfers(espnSlug, { sinceIso } = {}) {
     try {
       const clubs = await apif.fetchTeams(al.id, al.season);
       if (clubs.length) {
-        const since = sinceIso ? new Date(sinceIso).getTime() : 0;
         const settled = await Promise.allSettled(clubs.map((c) => apif.fetchTransfers(c.id)));
         const seen = new Set();
         const moves = [];
         for (const r of settled) {
           if (r.status !== "fulfilled") continue;
           for (const t of r.value) {
-            const d = new Date(t.date).getTime();
-            if (since && (isNaN(d) || d < since)) continue;
+            if (!isCurrentWindowMove(t.date, sinceIso)) continue;
             const key = `${t.playerId || t.player}|${t.date}|${t.inId}|${t.outId}`;
             if (seen.has(key)) continue;
             seen.add(key);
@@ -580,14 +587,10 @@ export async function fetchLeagueTransfers(espnSlug, { sinceIso } = {}) {
    transfer feed is the whole history, so we keep only the current window. */
 export async function fetchClubTransfers(espnSlug, teamId, { sinceIso } = {}) {
   if (!apifLeagueFor(espnSlug) || !teamId) return [];
-  const since = sinceIso ? new Date(sinceIso).getTime() : 0;
   const raw = await apif.fetchTransfers(teamId);
   return raw
     .filter((t) => (t.inId === teamId || t.outId === teamId))
-    .filter((t) => {
-      const d = new Date(t.date).getTime();
-      return !since || (!isNaN(d) && d >= since);
-    })
+    .filter((t) => isCurrentWindowMove(t.date, sinceIso))
     .map((t) => ({
       player: t.player,
       date: t.date,
