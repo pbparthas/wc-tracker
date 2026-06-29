@@ -481,6 +481,7 @@ export async function fetchLeagueTable(espnSlug) {
         team: { code: null, espnId: null, name: r.team.name, flag: "", logo: r.team.logo },
         p: r.p, w: r.w, d: r.d, l: r.l,
         gf: r.gf, ga: r.ga, pts: r.pts,
+        form: r.form || "",
       })),
       season: String(al.season),
     };

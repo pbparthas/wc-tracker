@@ -3,11 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import Flag from "../../components/Flag.jsx";
 import StatusPill from "../../components/StatusPill.jsx";
 import AiCard from "../../components/AiCard.jsx";
-import { EventSummary, PitchView, BenchList, CommentaryCard, StatsCard, TimelineCard } from "../../components/MatchParts.jsx";
+import { EventSummary, PitchView, BenchList, CommentaryCard, StatsCard, TimelineCard, PredictionsCard, InjuriesCard } from "../../components/MatchParts.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchLeagueMatches, fetchLeagueSummary } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
+import { usePredictions } from "../../hooks/usePredictions.js";
+import { useInjuries } from "../../hooks/useInjuries.js";
 import { useSwipeTabs } from "../../hooks/useSwipeTabs.js";
 import { useResume } from "../../hooks/useResume.js";
 import { cacheGet, cacheSet } from "../../lib/storage.js";
@@ -63,6 +65,12 @@ export default function EplMatchDetailPage() {
   );
 
   const upcoming = state === "pre";
+  // Win probability + injuries: useful before kickoff and during live play
+  // (same as the World Cup match page). Both work off the API-Football fixture id.
+  const showPredictions = upcoming || state === "in";
+  const { predictions } = usePredictions(showPredictions ? match?.id : null);
+  const { injuries } = useInjuries(showPredictions ? match?.id : null);
+
   const tabs = match ? [
     { id: "overview", label: "Overview" },
     ...(!upcoming ? [{ id: "timeline", label: "Timeline" }] : []),
@@ -145,6 +153,8 @@ export default function EplMatchDetailPage() {
       {activeTab === "overview" && (
         <>
           {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
+          {showPredictions && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} />}
+          {showPredictions && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} homeId={match.apifHomeId} awayId={match.apifAwayId} />}
           {state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
           {summary?.info && (summary.info.attendance || summary.info.referee) && (

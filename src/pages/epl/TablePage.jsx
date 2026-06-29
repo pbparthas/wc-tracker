@@ -16,6 +16,24 @@ function zoneOf(pos) {
   return [null, null];
 }
 
+/* Last-5 form (most recent last), as small W/D/L pips. API-Football ships this
+   as a string like "WWDLW"; ESPN's table fallback omits it, so render nothing. */
+function FormPips({ form }) {
+  const seq = (form || "").slice(-5).split("");
+  if (!seq.length) return null;
+  const color = (r) => (r === "W" ? "#3a7d2e" : r === "L" ? "var(--live)" : "#b58a1e");
+  return (
+    <span style={{ display: "inline-flex", gap: 3 }}>
+      {seq.map((r, i) => (
+        <span key={i} title={r} style={{
+          width: 14, height: 14, borderRadius: 3, background: color(r),
+          color: "#fff", fontSize: 9, fontWeight: 800, lineHeight: "14px", textAlign: "center",
+        }}>{r}</span>
+      ))}
+    </span>
+  );
+}
+
 export default function TablePage() {
   const { data, loading, error, refresh } = useCached("table:epl", 30 * 60 * 1000, () =>
     fetchLeagueTable(EPL.slug)
@@ -61,6 +79,7 @@ export default function TablePage() {
                         {r.team.logo && <img src={r.team.logo} alt="" width={16} height={16} loading="lazy" />}
                         {r.team.name}
                       </span>
+                      {r.form ? <div style={{ marginTop: 4 }}><FormPips form={r.form} /></div> : null}
                     </td>
                     <td>{r.p}</td><td>{r.w}</td><td>{r.d}</td><td>{r.l}</td>
                     <td>{r.gf - r.ga > 0 ? "+" : ""}{r.gf - r.ga}</td>
