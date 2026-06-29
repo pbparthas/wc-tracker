@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { liveWinProbability, parseMatchMinute } from "../lib/winprob.js";
 
 const ICONS = { goal: "⚽", og: "⚽", pen: "⚽", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
 
@@ -674,13 +675,20 @@ export function MatchGlance({ stats }) {
 
 /* ── Win probability + form (API-Football predictions) ───────────── */
 
-export function PredictionsCard({ predictions, homeTeam, awayTeam }) {
+export function PredictionsCard({ predictions, homeTeam, awayTeam, match }) {
   if (!predictions) return null;
   const { percent, advice, homeForm, awayForm } = predictions;
-  const homeW = parseInt(percent?.home) || 0;
-  const draw = parseInt(percent?.draw) || 0;
-  const awayW = parseInt(percent?.away) || 0;
+
+  // Live matches: shift the pre-match prediction by the current score + minute,
+  // so the meter reflects the game in progress instead of a stale kickoff number.
+  const minute = match?.state === "in" ? parseMatchMinute(match.status) : null;
+  const isLive = match?.state === "in" && minute != null;
+  const live = isLive ? liveWinProbability(percent, match.hg, match.ag, minute) : null;
+  const homeW = live ? live.home : parseInt(percent?.home) || 0;
+  const draw = live ? live.draw : parseInt(percent?.draw) || 0;
+  const awayW = live ? live.away : parseInt(percent?.away) || 0;
   const total = homeW + draw + awayW || 100;
+  const lbl = (n) => `${n}%`;
 
   const FormDots = ({ form }) => {
     if (!form) return null;
@@ -695,7 +703,12 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam }) {
 
   return (
     <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-      <div className="eyebrow" style={{ marginBottom: 8 }}>🎯 Win probability</div>
+      <div className="eyebrow" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>🎯 Win probability</span>
+        {isLive
+          ? <span style={{ color: "var(--live)", fontWeight: 700 }}><span className="pulse">●</span> LIVE · {minute}'</span>
+          : <span style={{ color: "var(--muted)", fontWeight: 600 }}>pre-match</span>}
+      </div>
 
       <div style={{ marginBottom: 8 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", fontSize: 13, marginBottom: 4 }}>
@@ -709,11 +722,17 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam }) {
           <div style={{ width: `${(awayW / total) * 100}%`, background: "#1565c0" }} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", fontSize: 12, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
-          <span style={{ color: homeW >= awayW ? "var(--chalk)" : "var(--muted)" }}>{percent?.home}</span>
-          <span style={{ color: "var(--muted)", textAlign: "center" }}>{percent?.draw}</span>
-          <span style={{ textAlign: "right", color: awayW > homeW ? "var(--chalk)" : "var(--muted)" }}>{percent?.away}</span>
+          <span style={{ color: homeW >= awayW ? "var(--chalk)" : "var(--muted)" }}>{lbl(homeW)}</span>
+          <span style={{ color: "var(--muted)", textAlign: "center" }}>{lbl(draw)}</span>
+          <span style={{ textAlign: "right", color: awayW > homeW ? "var(--chalk)" : "var(--muted)" }}>{lbl(awayW)}</span>
         </div>
       </div>
+
+      {isLive && (
+        <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 8 }}>
+          Live estimate from the score &amp; time left — shifts as the game goes.
+        </div>
+      )}
 
       {(homeForm || awayForm) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", borderTop: "1px solid var(--line)", padding: "8px 0", gap: "0 8px" }}>
@@ -723,7 +742,7 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam }) {
         </div>
       )}
 
-      {advice && (
+      {advice && !isLive && (
         <div style={{ borderTop: "1px solid var(--line)", paddingTop: 8, fontSize: 13 }}>
           <span style={{ color: "var(--muted)" }}>Tip: </span>{advice}
         </div>

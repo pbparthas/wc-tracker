@@ -153,7 +153,7 @@ export default function EplMatchDetailPage() {
       {activeTab === "overview" && (
         <>
           {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
-          {showPredictions && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} />}
+          {showPredictions && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} match={match} />}
           {showPredictions && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} homeId={match.apifHomeId} awayId={match.apifAwayId} />}
           {state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
