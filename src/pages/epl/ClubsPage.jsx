@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchTeams } from "../../lib/espn.js";
+import { fetchLeagueClubs } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 
@@ -10,7 +10,7 @@ const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 export default function ClubsPage() {
   const navigate = useNavigate();
-  const { data: clubs, loading, error, refresh } = useCached("clubs:epl", WEEK, () => fetchTeams(EPL.slug));
+  const { data: clubs, loading, error, refresh } = useCached("clubs:epl:af", WEEK, () => fetchLeagueClubs(EPL.slug));
   const { favs } = useFavorites("epl");
 
   return (

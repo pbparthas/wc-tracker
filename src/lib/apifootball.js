@@ -186,19 +186,90 @@ export async function fetchInjuries(fixtureId) {
   }));
 }
 
-export async function fetchTopScorers(leagueId, season) {
-  const data = await apiFetch("players/topscorers", { league: leagueId, season });
-  return (data.response || []).map((e, i) => ({
+function mapLeader(e, i) {
+  return {
     rank: i + 1,
     player: e.player?.name || "?",
     photo: e.player?.photo || null,
     nationality: e.player?.nationality || "",
     goals: e.statistics?.[0]?.goals?.total || 0,
     assists: e.statistics?.[0]?.goals?.assists || 0,
+    appearances: e.statistics?.[0]?.games?.appearences || 0,
     team: e.statistics?.[0]?.team?.name || "",
     teamLogo: e.statistics?.[0]?.team?.logo || null,
     rating: e.statistics?.[0]?.games?.rating || null,
+  };
+}
+
+export async function fetchTopScorers(leagueId, season) {
+  const data = await apiFetch("players/topscorers", { league: leagueId, season });
+  return (data.response || []).map(mapLeader);
+}
+
+export async function fetchTopAssists(leagueId, season) {
+  const data = await apiFetch("players/topassists", { league: leagueId, season });
+  return (data.response || []).map(mapLeader);
+}
+
+/* All clubs in a league/season, with API-Football team ids (needed for squads,
+   transfers and per-player stats). */
+export async function fetchTeams(leagueId, season) {
+  const data = await apiFetch("teams", { league: leagueId, season });
+  return (data.response || [])
+    .map((x) => ({
+      id: x.team?.id != null ? String(x.team.id) : "",
+      name: x.team?.name || "",
+      logo: x.team?.logo || null,
+      code: x.team?.code || "",
+      venue: x.venue?.name || "",
+      city: x.venue?.city || "",
+    }))
+    .filter((c) => c.id && c.name)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const POS_ABBR = { Goalkeeper: "G", Defender: "D", Midfielder: "M", Attacker: "F" };
+
+/* Current squad for a team. */
+export async function fetchSquad(teamId) {
+  const data = await apiFetch("players/squads", { team: teamId });
+  const players = data.response?.[0]?.players || [];
+  return players.map((p) => ({
+    id: p.id != null ? String(p.id) : "",
+    name: p.name || "?",
+    jersey: p.number != null ? String(p.number) : "",
+    pos: POS_ABBR[p.position] || (p.position || "")[0] || "",
+    posName: p.position || "",
+    age: p.age || null,
+    headshot: p.photo || null,
   }));
+}
+
+/* Transfer history for a team's players. Flattened to one row per move; the
+   caller filters by date/direction for a given window. */
+export async function fetchTransfers(teamId) {
+  const data = await apiFetch("transfers", { team: teamId });
+  const out = [];
+  for (const entry of data.response || []) {
+    const player = entry.player?.name || "";
+    const playerId = entry.player?.id != null ? String(entry.player.id) : null;
+    for (const t of entry.transfers || []) {
+      out.push({
+        player,
+        playerId,
+        date: t.date || "",
+        type: t.type || "",
+        inId: t.teams?.in?.id != null ? String(t.teams.in.id) : null,
+        inName: t.teams?.in?.name || "",
+        inLogo: t.teams?.in?.logo || null,
+        outId: t.teams?.out?.id != null ? String(t.teams.out.id) : null,
+        outName: t.teams?.out?.name || "",
+        outLogo: t.teams?.out?.logo || null,
+      });
+    }
+  }
+  out.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return out;
 }
 
 function normalizeFixture(f) {

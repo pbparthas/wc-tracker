@@ -10,6 +10,7 @@ export const COMPETITIONS = {
     season: { label: "2026-27", fixturesNote: "Fixtures are usually released in mid-June." },
     window: {
       label: "Summer transfer window",
+      opensIso: "2026-06-01T00:00:00Z", // summer window business — used to filter the transfer feed
       closesIso: "2026-09-01T17:30:00Z", // expected ≈ 11 PM IST, 1 Sep — edit when confirmed
     },
     /* Table zone markers (positions ≤ value). England earned five Champions

@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
+import LeadersList from "../../components/LeadersList.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchLeagueTable } from "../../lib/datasource.js";
+import { fetchLeagueTable, fetchLeagueScorers, fetchLeagueAssists } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 
 const EPL = COMPETITIONS.epl;
+const HALF_HOUR = 30 * 60 * 1000;
 
 /* Zone colors: CL / EL / Conference / relegation. The fifth CL spot is
    coefficient-dependent — footnoted as approximate. */
@@ -34,10 +36,19 @@ function FormPips({ form }) {
   );
 }
 
+const VIEWS = [
+  { id: "table", label: "Table" },
+  { id: "scorers", label: "Scorers" },
+  { id: "assists", label: "Assists" },
+];
+
 export default function TablePage() {
-  const { data, loading, error, refresh } = useCached("table:epl", 30 * 60 * 1000, () =>
+  const [view, setView] = useState("table");
+  const { data, loading, error, refresh } = useCached("table:epl", HALF_HOUR, () =>
     fetchLeagueTable(EPL.slug)
   );
+  const scorers = useCached("scorers:epl", HALF_HOUR, () => fetchLeagueScorers(EPL.slug));
+  const assists = useCached("assists:epl", HALF_HOUR, () => fetchLeagueAssists(EPL.slug));
 
   return (
     <div className="wrap" style={{ paddingTop: 16 }}>
@@ -49,6 +60,25 @@ export default function TablePage() {
           {loading ? "…" : "↻"}
         </button>
       </div>
+
+      <div className="match-tabs">
+        {VIEWS.map((v) => (
+          <button key={v.id} className={"match-tab" + (view === v.id ? " on" : "")} onClick={() => setView(v.id)}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === "scorers" && (
+        <LeadersList rows={scorers.data} metric="goals" loading={scorers.loading} error={scorers.error}
+          emptyNote={`Top scorers fill in once the ${EPL.season.label} season kicks off.`} />
+      )}
+      {view === "assists" && (
+        <LeadersList rows={assists.data} metric="assists" loading={assists.loading} error={assists.error}
+          emptyNote={`Assist leaders fill in once the ${EPL.season.label} season kicks off.`} />
+      )}
+
+      {view === "table" && (<>
 
       {loading && !data && <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading table…</p>}
       {error && !data && (
@@ -101,6 +131,7 @@ export default function TablePage() {
           (the extra CL place depends on UEFA coefficients).
         </p>
       )}
+      </>)}
     </div>
   );
 }

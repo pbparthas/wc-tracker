@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import AiCard from "../../components/AiCard.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchTransactions, fetchTeams } from "../../lib/espn.js";
+import { fetchTransactions } from "../../lib/espn.js";
+import { fetchLeagueClubs } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
@@ -63,7 +64,7 @@ export default function TransfersPage() {
   const { data: moves, loading, error, refresh } = useCached("transfers:epl", 30 * 60 * 1000, () =>
     fetchTransactions(EPL.slug)
   );
-  const { data: clubs } = useCached("clubs:epl", 7 * 24 * HOUR, () => fetchTeams(EPL.slug));
+  const { data: clubs } = useCached("clubs:epl:af", 7 * 24 * HOUR, () => fetchLeagueClubs(EPL.slug));
   const { favs } = useFavorites("epl");
   const [mine, setMine] = useState(false);
   const [showFeed, setShowFeed] = useState(false);

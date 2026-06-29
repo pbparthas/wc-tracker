@@ -489,3 +489,70 @@ export async function fetchLeagueTable(espnSlug) {
     return espn.fetchLeagueTable(espnSlug);
   }
 }
+
+/* League scoring/assist leaders (API-Football only — no ESPN equivalent here). */
+export async function fetchLeagueScorers(espnSlug) {
+  const al = apifLeagueFor(espnSlug);
+  if (!al) return [];
+  try {
+    return await apif.fetchTopScorers(al.id, al.season);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchLeagueAssists(espnSlug) {
+  const al = apifLeagueFor(espnSlug);
+  if (!al) return [];
+  try {
+    return await apif.fetchTopAssists(al.id, al.season);
+  } catch {
+    return [];
+  }
+}
+
+/* Clubs in a league. API-Football is preferred (its team ids unlock squads,
+   transfers and player stats); ESPN is the fallback. */
+export async function fetchLeagueClubs(espnSlug) {
+  const al = apifLeagueFor(espnSlug);
+  if (al) {
+    try {
+      const clubs = await apif.fetchTeams(al.id, al.season);
+      if (clubs.length) return clubs;
+    } catch { /* fall back to ESPN */ }
+  }
+  return espn.fetchTeams(espnSlug);
+}
+
+/* Current squad for a club, by API-Football team id. */
+export async function fetchClubSquad(espnSlug, teamId) {
+  if (!apifLeagueFor(espnSlug) || !teamId) return [];
+  return apif.fetchSquad(teamId);
+}
+
+/* A club's transfers for the current window, mapped to the move shape the club
+   page already renders (in = arriving, out = leaving). API-Football's per-team
+   transfer feed is the whole history, so we keep only the current window. */
+export async function fetchClubTransfers(espnSlug, teamId, { sinceIso } = {}) {
+  if (!apifLeagueFor(espnSlug) || !teamId) return [];
+  const since = sinceIso ? new Date(sinceIso).getTime() : 0;
+  const raw = await apif.fetchTransfers(teamId);
+  return raw
+    .filter((t) => (t.inId === teamId || t.outId === teamId))
+    .filter((t) => {
+      const d = new Date(t.date).getTime();
+      return !since || (!isNaN(d) && d >= since);
+    })
+    .map((t) => ({
+      player: t.player,
+      date: t.date,
+      from: t.outName,
+      to: t.inName,
+      fromId: t.outId,
+      toId: t.inId,
+      fromLogo: t.outLogo,
+      toLogo: t.inLogo,
+      fee: t.type && t.type !== "N/A" ? t.type : "",
+      type: t.type,
+    }));
+}

@@ -4,10 +4,8 @@ import AiCard from "../../components/AiCard.jsx";
 import SquadList from "../../components/SquadList.jsx";
 import PlayerSheet from "../../components/PlayerSheet.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchTeams, fetchTransactions } from "../../lib/espn.js";
-import { fetchLeagueTable } from "../../lib/datasource.js";
+import { fetchLeagueClubs, fetchLeagueTable, fetchClubSquad, fetchClubTransfers } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
-import { useRoster } from "../../hooks/useRoster.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
 import { clubPrompt } from "../../lib/prompts.js";
@@ -39,14 +37,16 @@ function PositionBadge({ pos }) {
 
 export default function ClubPage() {
   const { id } = useParams();
-  const { data: clubs } = useCached("clubs:epl", 7 * DAY, () => fetchTeams(EPL.slug));
-  const { data: moves } = useCached("transfers:epl", 30 * 60 * 1000, () => fetchTransactions(EPL.slug));
+  const { data: clubs } = useCached("clubs:epl:af", 7 * DAY, () => fetchLeagueClubs(EPL.slug));
+  const { data: moves } = useCached("clubtransfers:epl:" + id, 30 * 60 * 1000, () =>
+    fetchClubTransfers(EPL.slug, id, { sinceIso: EPL.window.opensIso })
+  );
   const { data: table } = useCached("table:epl", DAY, () => fetchLeagueTable(EPL.slug));
+  const squad = useCached("squad:epl:" + id, DAY, () => fetchClubSquad(EPL.slug, id));
   const { favs, toggle } = useFavorites("epl");
   const [picked, setPicked] = useState(null);
 
   const club = (clubs || []).find((c) => c.id === id);
-  const roster = useRoster("epl:" + id, id, EPL.slug);
 
   const ins = (moves || []).filter((m) => m.toId === id || (club && m.to === club.name));
   const outs = (moves || []).filter((m) => m.fromId === id || (club && m.from === club.name));
@@ -144,7 +144,7 @@ export default function ClubPage() {
 
       <h2 className="disp section-h">SQUAD</h2>
       <div className="card" style={{ padding: "6px 14px 12px" }}>
-        <SquadList {...roster} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
+        <SquadList players={squad.data} loading={squad.loading} error={squad.error} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
       </div>
 
       <p style={{ fontSize: 12, color: "var(--muted)", margin: "12px 0 20px" }}>
