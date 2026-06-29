@@ -122,17 +122,15 @@ export async function fetchScoreboard(fromYmd, toYmd, opts = {}) {
   try {
     const all = await getAllFixtures(opts.bust);
     return all.filter(inRange).map(fixtureToMatch);
-  } catch (e) {
-    // API-Football unavailable (commonly a rate-limit). Serve the last good
-    // API-Football snapshot. We deliberately do NOT fall back to ESPN for World
-    // Cup fixtures: ESPN still models a 32-team bracket and labels the 48-team
-    // first knockout round "Round of 16", so its fixtures land in the wrong
-    // bracket column (R32 matchups show up under Round of 16) and corrupt the
-    // knockout view. Keeping the last good data — or nothing — beats a wrong
-    // bracket. (ESPN is still used elsewhere: commentary, standings, scorers.)
+  } catch {
+    // API-Football unavailable (commonly a rate-limit / quota). Prefer the last
+    // good API-Football snapshot; otherwise fall back to ESPN so the World Cup
+    // keeps working. ESPN's wrong knockout-round labels no longer matter — the
+    // bracket is built from the static 2026 skeleton and binds fixtures by date
+    // and team, so it stays correct whatever ESPN calls the rounds.
     const snapshot = cacheGet(ALL_FIXTURES_KEY);
     if (snapshot) return snapshot.filter(inRange).map(fixtureToMatch);
-    throw e;
+    return espn.fetchScoreboard(fromYmd, toYmd, opts);
   }
 }
 
@@ -545,46 +543,13 @@ export function isCurrentWindowMove(dateStr, sinceIso) {
   return !isNaN(d) && !isNaN(since) && d >= since;
 }
 
-/* League-wide transfer feed for the current window. API-Football's /transfers is
-   per-team only, so we fan out across the league's clubs and merge (a deal shows
-   in both clubs' feeds — dedup it). ESPN is the fallback when API-Football's
-   club list is unavailable. */
-export async function fetchLeagueTransfers(espnSlug, { sinceIso } = {}) {
-  const al = apifLeagueFor(espnSlug);
-  if (al) {
-    try {
-      const clubs = await apif.fetchTeams(al.id, al.season);
-      if (clubs.length) {
-        const settled = await Promise.allSettled(clubs.map((c) => apif.fetchTransfers(c.id)));
-        const seen = new Set();
-        const moves = [];
-        for (const r of settled) {
-          if (r.status !== "fulfilled") continue;
-          for (const t of r.value) {
-            if (!isCurrentWindowMove(t.date, sinceIso)) continue;
-            const key = `${t.playerId || t.player}|${t.date}|${t.inId}|${t.outId}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            moves.push({
-              player: t.player,
-              date: t.date,
-              from: t.outName,
-              to: t.inName,
-              fromId: t.outId,
-              toId: t.inId,
-              fromLogo: t.outLogo,
-              toLogo: t.inLogo,
-              fee: t.type && t.type !== "N/A" ? t.type : "",
-            });
-          }
-        }
-        // API-Football is authoritative here — return its result even if empty,
-        // rather than falling back to ESPN's differently-shaped feed.
-        moves.sort((a, b) => new Date(b.date) - new Date(a.date));
-        return moves;
-      }
-    } catch { /* fall back to ESPN */ }
-  }
+/* League-wide transfer feed. API-Football's /transfers is per-team only, so a
+   whole-league feed would need one call PER CLUB (~20 per league) — which blows
+   through the request quota almost immediately. So the structured league feed
+   uses ESPN's single league-transactions endpoint instead. The AI "Confirmed
+   moves" card (Gemini search) carries the live breadth; per-club pages can still
+   pull richer API-Football detail on demand. */
+export async function fetchLeagueTransfers(espnSlug) {
   return espn.fetchTransactions(espnSlug);
 }
 

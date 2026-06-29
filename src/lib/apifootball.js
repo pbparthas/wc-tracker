@@ -19,7 +19,7 @@ async function apiFetch(endpoint, params = {}) {
   const qs = new URLSearchParams(params).toString();
   const url = `${proxy}/${endpoint}${qs ? "?" + qs : ""}`;
   const res = await fetch(url);
-  if (res.status === 429) throw new Error("Rate limit reached — free tier allows 100 req/day");
+  if (res.status === 429) throw new Error("API-Football rate limit reached — try again later");
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`HTTP ${res.status}${body ? ": " + body : ""}`);
