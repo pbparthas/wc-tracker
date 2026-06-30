@@ -21,12 +21,19 @@ import { previewPrompt, recapPrompt, h2hPrompt } from "../lib/prompts.js";
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 /* Team column in the score header — links to the team page when we know the
-   team's code (resolved World Cup sides), otherwise plain. */
-function TeamCol({ team }) {
+   team's code (resolved World Cup sides), and highlights the winner. */
+function TeamCol({ team, outcome }) {
+  const win = outcome === "win";
+  const lose = outcome === "lose";
   const inner = (
     <>
       <Flag team={team} size={40} />
-      <div style={{ fontWeight: 700, marginTop: 6 }}>{team?.name}</div>
+      <div style={{
+        fontWeight: win ? 800 : 700, marginTop: 6,
+        color: win ? "var(--saffron)" : lose ? "var(--muted)" : undefined,
+      }}>
+        {team?.name}{win ? " ✓" : ""}
+      </div>
     </>
   );
   return team?.code
@@ -89,6 +96,14 @@ export default function MatchDetailPage() {
 
   const p = istParts(match.kickoff);
   const live = match.state === "in";
+  // Highlight the winner in the score header (penalties break a level tie).
+  const done = match.state === "post";
+  const pens = match.phg != null && match.pag != null;
+  const winnerSide = done
+    ? (match.hg > match.ag ? "home" : match.ag > match.hg ? "away"
+      : pens ? (match.phg > match.pag ? "home" : match.pag > match.phg ? "away" : null) : null)
+    : null;
+  const outcomeOf = (side) => (winnerSide ? (winnerSide === side ? "win" : "lose") : null);
 
   // minHeight on the wrap keeps the whole screen swipeable even when a tab's
   // content is short (e.g. "Timeline not available yet."), so the tab-swipe
@@ -103,7 +118,7 @@ export default function MatchDetailPage() {
           <StatusPill status={match.status} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8, textAlign: "center" }}>
-          <TeamCol team={match.home} />
+          <TeamCol team={match.home} outcome={outcomeOf("home")} />
           <div>
             <div className={"disp" + (live ? " pulse" : "")} style={{
               fontSize: live ? 48 : upcoming ? 22 : 38,
@@ -124,7 +139,7 @@ export default function MatchDetailPage() {
               </div>
             )}
           </div>
-          <TeamCol team={match.away} />
+          <TeamCol team={match.away} outcome={outcomeOf("away")} />
         </div>
 
         <EventSummary events={summary?.events} match={match} />

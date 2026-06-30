@@ -69,6 +69,22 @@ export default function TeamPage() {
     { ttlMs: 6 * 60 * 60 * 1000 }
   );
 
+  // Which round they went out in — the correct bracket round (not the feed's
+  // mislabel), so the badge reads e.g. "ELIMINATED · ROUND OF 32".
+  const outRound = useMemo(() => {
+    if (!isOut) return null;
+    const koLoss = fixtures
+      .filter((m) => m.state === "post" && /round of 32|round of 16|quarter|semi|final/i.test(m.stage || ""))
+      .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))
+      .pop();
+    if (!koLoss) return "Group stage";
+    const rounds = assembleBracket(matches, standings);
+    for (const r of rounds) {
+      if ((r.matches || []).some((mm) => mm && mm.id === koLoss.id)) return r.label;
+    }
+    return koLoss.stage;
+  }, [isOut, fixtures, matches, standings]);
+
   if (!team) {
     return (
       <div className="wrap" style={{ paddingTop: 20 }}>
@@ -98,7 +114,7 @@ export default function TeamPage() {
         </div>
         {isOut && (
           <div style={{ display: "inline-block", background: "var(--live)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 12, marginTop: 8, letterSpacing: "0.05em" }}>
-            ELIMINATED
+            ELIMINATED{outRound ? ` · ${outRound.toUpperCase()}` : ""}
           </div>
         )}
         <p style={{ fontSize: 14, marginTop: 10 }}>{team.trivia}</p>
