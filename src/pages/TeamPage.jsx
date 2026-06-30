@@ -32,24 +32,19 @@ export default function TeamPage() {
   const roster = useRoster(code, espnTeamId(inFixture));
   const deepDive = useAiContent("team:" + code, () => teamPrompt(team, standings, fixtures), { ttlMs: WEEK });
 
-  // Keyed by results played so far — every new final score invalidates the
-  // cached scenario text, which is exactly when the maths changes.
-  const played = fixtures.filter((m) => m.state === "post").length;
-  const road = useAiContent(
-    `road2:${code}:${played}`,
-    () => roadPrompt(team, standings, computeThirdPlace(standings), fixtures, assembleBracket(matches)),
-    { ttlMs: 6 * 60 * 60 * 1000 }
-  );
-
   const isOut = useMemo(() => {
     if (!team || !standings) return false;
-    // Knockout: lost any completed KO match
+    // Knockout: lost any completed KO match — including on penalties, where the
+    // 90/120-min score is level so hg/ag alone never shows the loss.
     const koLost = matches.some((m) => {
       if (m.state !== "post") return false;
       if (m.home.code !== code && m.away.code !== code) return false;
       const koRound = /round of 32|round of 16|quarter|semi|final/i.test(m.stage || "");
       if (!koRound) return false;
-      return m.home.code === code ? m.hg < m.ag : m.ag < m.hg;
+      const isHome = m.home.code === code;
+      if (m.hg !== m.ag) return isHome ? m.hg < m.ag : m.ag < m.hg;
+      if (m.phg != null && m.pag != null && m.phg !== m.pag) return isHome ? m.phg < m.pag : m.pag < m.phg;
+      return false;
     });
     if (koLost) return true;
     // Group stage: finished bottom or 3rd and not in top-8 third
@@ -63,6 +58,16 @@ export default function TeamPage() {
     const entry = third.find((r) => r.team.code === code);
     return entry ? !entry.qualified : false;
   }, [code, team, standings, matches]);
+
+  // Keyed by results played AND elimination, so the cached scenario text is
+  // invalidated whenever a final score lands or the team goes out (a penalty
+  // exit included) — exactly when the "road ahead" stops being true.
+  const played = fixtures.filter((m) => m.state === "post").length;
+  const road = useAiContent(
+    `road3:${code}:${played}:${isOut ? "out" : "in"}`,
+    () => roadPrompt(team, standings, computeThirdPlace(standings), fixtures, assembleBracket(matches), isOut),
+    { ttlMs: 6 * 60 * 60 * 1000 }
+  );
 
   if (!team) {
     return (
@@ -105,9 +110,9 @@ export default function TeamPage() {
       </div>
 
       <AiCard
-        title="Road ahead — what do they need?"
+        title={isOut ? "How their tournament went" : "Road ahead — what do they need?"}
         ai={road}
-        cta="✨ Work it out"
+        cta={isOut ? "✨ Recap their run" : "✨ Work it out"}
         note="Qualification maths during the groups, the knockout path after — computed from the live tables."
       />
 

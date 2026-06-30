@@ -126,7 +126,7 @@ export function h2hPrompt(match, allMatches) {
 }
 
 /* Qualification scenarios during groups; knockout path once seeded. */
-export function roadPrompt(team, standings, third, fixtures, rounds) {
+export function roadPrompt(team, standings, third, fixtures, rounds, isOut = false) {
   const lines = [
     `Explain the road ahead for ${team.name} at the FIFA World Cup 2026 — exactly what fans checking qualification scenarios want to know.`,
     "Format rules (authoritative): 12 groups of 4; the top 2 of each group AND the 8 best third-placed teams advance to a Round of 32, then R16, QF, SF and the final.",
@@ -162,12 +162,41 @@ export function roadPrompt(team, standings, third, fixtures, rounds) {
       lines.push(`${r.rank}. Group ${r.group} ${r.team.name}: ${row(r)}${r.qualified ? "" : " — currently OUT"}`);
     }
   }
+  // The team's own knockout results so far (win/loss, penalties included).
+  const koPlayed = (fixtures || []).filter(
+    (m) => m.state === "post" && /round of 32|round of 16|quarter|semi|final/i.test(m.stage || "")
+  );
+  if (koPlayed.length) {
+    lines.push("Their knockout results so far (authoritative):");
+    for (const m of koPlayed) {
+      const isHome = m.home.code === team.code;
+      const us = isHome ? m.hg : m.ag;
+      const them = isHome ? m.ag : m.hg;
+      const opp = isHome ? m.away.name : m.home.name;
+      let verdict = us > them ? "WON" : us < them ? "LOST" : "drew";
+      let pens = "";
+      if (us === them && m.phg != null && m.pag != null) {
+        const pu = isHome ? m.phg : m.pag;
+        const pt = isHome ? m.pag : m.phg;
+        pens = ` (${pu}-${pt} on penalties)`;
+        verdict = pu > pt ? "WON" : pu < pt ? "LOST" : "drew";
+      }
+      lines.push(`- ${m.stage}: ${verdict} ${us}-${them} vs ${opp}${pens}`);
+    }
+  }
   const ko = (rounds || []).flatMap((r) =>
     (r.matches || []).filter(Boolean).map((m) => `- ${r.label}: ${m.home.name} vs ${m.away.name}`)
   );
   if (ko.length) {
     lines.push("Knockout bracket so far (authoritative; TBD = not yet decided):");
     lines.push(...ko);
+  }
+  if (isOut) {
+    lines.push(
+      `AUTHORITATIVE: ${team.name} have ALREADY BEEN ELIMINATED from the tournament. Do NOT describe any remaining path, ` +
+        "future opponents or a route to the final — that path no longer exists. Instead, briefly recap how their tournament " +
+        "went and where exactly it ended (the round and the result above)."
+    );
   }
   lines.push(
     "State clearly and up front whether they have ALREADY been eliminated, are still alive, or have already qualified — " +
