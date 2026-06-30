@@ -13,12 +13,48 @@ export function setProxyUrl(url) {
   else localStorage.removeItem(PROXY_KEY);
 }
 
-async function apiFetch(endpoint, params = {}) {
+/* Serialise every API-Football request through one queue. A single screen can
+   want several calls at once (a match summary fetches fixture + lineups +
+   events + stats + player-stats; once the leagues are live, five competitions
+   can refresh together) — firing them as a burst risks the per-minute rate
+   limit. This runs them one at a time with a small gap, so a burst goes out
+   sequentially instead. Cheap at our scale; the slight extra latency is fine.
+   Exported for testing. */
+const MIN_GAP_MS = 120;
+const REQUEST_TIMEOUT_MS = 12000;
+let apifChain = Promise.resolve();
+let apifLastStart = 0;
+export function throttle(fn) {
+  const result = apifChain.then(async () => {
+    const gap = MIN_GAP_MS - (Date.now() - apifLastStart);
+    if (gap > 0) await new Promise((r) => setTimeout(r, gap));
+    apifLastStart = Date.now();
+    return fn();
+  });
+  // Keep the chain alive even if a request rejects, so one failure doesn't stall
+  // the queue.
+  apifChain = result.then(() => {}, () => {});
+  return result;
+}
+
+function apiFetch(endpoint, params = {}) {
+  return throttle(() => rawApiFetch(endpoint, params));
+}
+
+async function rawApiFetch(endpoint, params) {
   const proxy = getProxyUrl();
   if (!proxy) throw new Error("No proxy URL configured");
   const qs = new URLSearchParams(params).toString();
   const url = `${proxy}/${endpoint}${qs ? "?" + qs : ""}`;
-  const res = await fetch(url);
+  // A hung request would otherwise block the whole serial queue.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
   if (res.status === 429) throw new Error("API-Football rate limit reached — try again later");
   if (!res.ok) {
     const body = await res.text().catch(() => "");
