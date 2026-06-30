@@ -29,12 +29,15 @@ export function normalizeEvent(ev) {
   if (state === "post") status = "FT";
   let stage = comp.notes?.[0]?.headline || "";
   if (!stage) stage = home.group && home.group === away.group ? "Group " + home.group : home.group ? "Knockout" : "Match";
+  const hasPens = homeC.shootoutScore != null && awayC.shootoutScore != null;
   return {
     id: String(ev.id ?? ""),
     home,
     away,
     hg: state === "pre" ? null : Number(homeC.score ?? 0),
     ag: state === "pre" ? null : Number(awayC.score ?? 0),
+    phg: hasPens ? Number(homeC.shootoutScore) : null,
+    pag: hasPens ? Number(awayC.shootoutScore) : null,
     state,
     status,
     kickoff: ev.date,
@@ -146,10 +149,13 @@ export async function fetchSummary(eventId, league = LEAGUE) {
     let hStatus = "UP";
     if (hState === "in") hStatus = hst.type?.name === "STATUS_HALFTIME" ? "HT" : "LIVE " + (hst.displayClock || "");
     if (hState === "post") hStatus = "FT";
+    const hasPens = hHome.shootoutScore != null && hAway.shootoutScore != null;
     out.match = {
       id: String(data.header?.id ?? eventId), home: mt(hHome), away: mt(hAway),
       hg: hState === "pre" ? null : Number(hHome.score ?? 0),
       ag: hState === "pre" ? null : Number(hAway.score ?? 0),
+      phg: hasPens ? Number(hHome.shootoutScore) : null,
+      pag: hasPens ? Number(hAway.shootoutScore) : null,
       state: hState, status: hStatus,
       kickoff: data.header?.gameDate || hComp.date || "",
       city: hComp.venue?.address?.city || "", venue: hComp.venue?.fullName || "",
@@ -163,13 +169,25 @@ export async function fetchSummary(eventId, league = LEAGUE) {
       .map((ke) => {
         const typeText = ke.type?.text || "";
         const lower = typeText.toLowerCase();
+        const isPen = lower.includes("penalty");
+        const missed = lower.includes("missed") || lower.includes("saved");
         let kind = "event";
         if (lower.includes("own goal")) kind = "og";
-        else if (lower.includes("penalty")) kind = lower.includes("missed") || lower.includes("saved") ? "event" : "pen";
+        else if (isPen) kind = missed ? "miss" : "pen";
         else if (lower.includes("goal")) kind = "goal";
         else if (lower.includes("yellow")) kind = "yellow";
         else if (lower.includes("red card") || lower === "red") kind = "red";
         else if (lower.includes("sub")) kind = "sub";
+        // Shootout kicks arrive as "Penalty - Scored/Missed" in the shootout
+        // period — a regulation penalty comes through as a Goal. Use ESPN's
+        // period/flags/text, or (when the match went to pens) any non-goal
+        // penalty event as the fallback signal.
+        const shootout = isPen && (
+          ke.shootout === true
+          || (ke.period?.number ?? 0) >= 5
+          || /shoot/i.test(typeText + " " + (ke.text || ""))
+          || (!lower.includes("goal") && out.match?.phg != null)
+        );
         return {
           kind,
           label: typeText,
@@ -177,6 +195,7 @@ export async function fetchSummary(eventId, league = LEAGUE) {
           team: ke.team ? resolveTeam(ke.team) : null,
           player: ke.participants?.[0]?.athlete?.displayName || "",
           playerOut: kind === "sub" ? (ke.participants?.[1]?.athlete?.displayName || "") : "",
+          shootout,
           text: ke.text || "",
         };
       })
