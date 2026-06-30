@@ -20,6 +20,20 @@ import { previewPrompt, recapPrompt, h2hPrompt } from "../lib/prompts.js";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
+/* Team column in the score header — links to the team page when we know the
+   team's code (resolved World Cup sides), otherwise plain. */
+function TeamCol({ team }) {
+  const inner = (
+    <>
+      <Flag team={team} size={40} />
+      <div style={{ fontWeight: 700, marginTop: 6 }}>{team?.name}</div>
+    </>
+  );
+  return team?.code
+    ? <Link to={`/team/${team.code}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>{inner}</Link>
+    : <div>{inner}</div>;
+}
+
 export default function MatchDetailPage() {
   const { id } = useParams();
   const [tab, setTab] = useState("overview");
@@ -89,10 +103,7 @@ export default function MatchDetailPage() {
           <StatusPill status={match.status} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8, textAlign: "center" }}>
-          <div>
-            <Flag team={match.home} size={40} />
-            <div style={{ fontWeight: 700, marginTop: 6 }}>{match.home.name}</div>
-          </div>
+          <TeamCol team={match.home} />
           <div>
             <div className={"disp" + (live ? " pulse" : "")} style={{
               fontSize: live ? 48 : upcoming ? 22 : 38,
@@ -113,10 +124,7 @@ export default function MatchDetailPage() {
               </div>
             )}
           </div>
-          <div>
-            <Flag team={match.away} size={40} />
-            <div style={{ fontWeight: 700, marginTop: 6 }}>{match.away.name}</div>
-          </div>
+          <TeamCol team={match.away} />
         </div>
 
         <EventSummary events={summary?.events} match={match} />

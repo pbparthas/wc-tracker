@@ -35,24 +35,39 @@ function Tie({ m }) {
       tabIndex={clickable ? 0 : undefined}
       onKeyDown={clickable ? (e) => e.key === "Enter" && go() : undefined}
     >
-      {["home", "away"].map((side) => (
-        <div className="tie-row" key={side}>
-          <Flag team={m[side]} size={16} />
-          <span
-            className="nm"
-            style={{
-              fontWeight: winner === side ? 800 : 600,
-              color: place || (done && winner && winner !== side) ? "var(--muted)" : "var(--chalk)",
-            }}
+      {["home", "away"].map((side) => {
+        const t = m[side];
+        const isWinner = winner === side;
+        const isLoser = done && winner && !isWinner;
+        const teamLink = t?.code ? (e) => { e.stopPropagation(); navigate(`/team/${t.code}`); } : null;
+        return (
+          <div
+            className="tie-row"
+            key={side}
+            style={isWinner ? { borderLeft: "3px solid var(--saffron)", marginLeft: -8, paddingLeft: 5 } : undefined}
           >
-            {m[side].name}
-          </span>
-          <span className="sc" style={{ color: winner === side ? "var(--saffron)" : "var(--chalk)" }}>
-            {place || m.state === "pre" ? "" : side === "home" ? m.hg : m.ag}
-            {!place && pens && <span style={{ fontSize: 10, fontWeight: 600 }}> ({side === "home" ? m.phg : m.pag})</span>}
-          </span>
-        </div>
-      ))}
+            <Flag team={t} size={16} />
+            <span
+              className="nm"
+              onClick={teamLink || undefined}
+              style={{
+                fontWeight: isWinner ? 800 : 600,
+                color: isWinner ? "var(--saffron)" : isLoser || place ? "var(--muted)" : "var(--chalk)",
+                cursor: teamLink ? "pointer" : undefined,
+                textDecoration: teamLink ? "underline" : undefined,
+                textDecorationColor: "var(--line)",
+                textUnderlineOffset: 2,
+              }}
+            >
+              {t.name}{isWinner ? " ✓" : ""}
+            </span>
+            <span className="sc" style={{ color: isWinner ? "var(--saffron)" : "var(--chalk)", fontWeight: isWinner ? 800 : 600 }}>
+              {place || m.state === "pre" ? "" : side === "home" ? m.hg : m.ag}
+              {!place && pens && <span style={{ fontSize: 10, fontWeight: 600 }}> ({side === "home" ? m.phg : m.pag})</span>}
+            </span>
+          </div>
+        );
+      })}
       <div className="tie-meta">
         {m.matchNo ? <span style={{ color: "var(--saffron)", fontWeight: 700 }}>M{m.matchNo} · </span> : null}
         {m.state === "in" ? <span style={{ color: "var(--live)", fontWeight: 700 }}>{m.status}</span> : p ? `${p.day} · ${p.time} IST` : "TBC"}

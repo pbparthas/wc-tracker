@@ -147,6 +147,21 @@ describe("assembleBracket", () => {
     expect(ko).toHaveLength(32);
   });
 
+  it("resolves a later-round feeder once the feeding match is decided", () => {
+    // Match 74 (Boston, 29 Jun 20:30Z) feeds R16 match 89's home slot
+    // ("Winner Match 74"). Play it out: Paraguay beat Germany on penalties.
+    const m74 = {
+      id: "e74", stage: "Round of 16", kickoff: "2026-06-29T20:30:00Z",
+      home: { name: "Germany", code: "GER" }, away: { name: "Paraguay", code: "PAR" },
+      hg: 1, ag: 1, phg: 3, pag: 4, state: "post",
+    };
+    const rounds = assembleBracket([m74], {});
+    const r16 = round(rounds, "R16").matches;
+    const m89 = r16.find((x) => x.matchNo === 89);
+    expect(m89.home.name).toBe("Paraguay"); // Winner Match 74 resolved
+    expect(m89.away.name).toBe("Winner Match 77"); // 77 not played yet
+  });
+
   it("ignores group-stage fixtures", () => {
     const rounds = assembleBracket([
       { id: "g", stage: "Group L", kickoff: "2026-06-26T19:00:00Z", home: { name: "Spain" }, away: { name: "Japan" }, state: "pre" },

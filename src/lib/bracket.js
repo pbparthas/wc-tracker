@@ -24,7 +24,22 @@ const teamKey = (t) => (t?.code || t?.name || "").toString().trim().toUpperCase(
 
 const GROUP_WINNER = /^Winner Group ([A-L])$/i;
 const GROUP_RUNNERUP = /^Runner-up Group ([A-L])$/i;
+const WINNER_MATCH = /^Winner Match (\d+)$/i;
+const LOSER_MATCH = /^Loser Match (\d+)$/i;
 const ROUND_LABEL = Object.fromEntries(ROUNDS.map((r) => [r.id, r.label]));
+
+/* Winner / loser of a finished, decided knockout fixture (penalties break a
+   level tie). Used to resolve "Winner Match 74" feeders once match 74 is done. */
+function decideResult(f) {
+  if (!f || f.state !== "post") return null;
+  if (f.hg > f.ag) return { winner: f.home, loser: f.away };
+  if (f.ag > f.hg) return { winner: f.away, loser: f.home };
+  if (f.phg != null && f.pag != null) {
+    if (f.phg > f.pag) return { winner: f.home, loser: f.away };
+    if (f.pag > f.phg) return { winner: f.away, loser: f.home };
+  }
+  return null;
+}
 
 // A feed fixture is a knockout fixture if it isn't a group game and either
 // carries a knockout round label or kicks off on/after the knockout window.
@@ -43,28 +58,31 @@ function groupSettled(rows) {
   return Array.isArray(rows) && rows.length >= 2 && rows.every((e) => (e.p ?? 0) >= 3);
 }
 
-/* Resolve a feeder label to a real qualified team from the live standings.
-   Group winners and runners-up resolve once their group is settled; third-place
-   slots ("3rd Group C/E/F/H") and "Winner Match N" depend on results that don't
-   exist yet, so they stay as labels. */
-function resolveFeeder(label, standings) {
-  if (!standings) return null;
+/* Resolve a feeder label to a real team. Group winners/runners-up come from the
+   settled standings; "Winner Match N" / "Loser Match N" come from the results of
+   the matches already played, so a later-round slot fills in as soon as the side
+   that feeds it is decided. Third-place slots stay as labels. */
+function resolveFeeder(label, standings, results) {
   let m = GROUP_WINNER.exec(label);
   if (m) {
-    const g = standings[m[1].toUpperCase()];
+    const g = standings?.[m[1].toUpperCase()];
     return groupSettled(g) ? g[0].team : null;
   }
   m = GROUP_RUNNERUP.exec(label);
   if (m) {
-    const g = standings[m[1].toUpperCase()];
+    const g = standings?.[m[1].toUpperCase()];
     return groupSettled(g) ? g[1].team : null;
   }
+  m = WINNER_MATCH.exec(label);
+  if (m) return results?.get(Number(m[1]))?.winner || null;
+  m = LOSER_MATCH.exec(label);
+  if (m) return results?.get(Number(m[1]))?.loser || null;
   return null;
 }
 
-function placeholderTie(slot, standings) {
-  const home = resolveFeeder(slot.home, standings);
-  const away = resolveFeeder(slot.away, standings);
+function placeholderTie(slot, standings, results) {
+  const home = resolveFeeder(slot.home, standings, results);
+  const away = resolveFeeder(slot.away, standings, results);
   return {
     id: `ko-${slot.no}`,
     matchNo: slot.no,
@@ -146,16 +164,23 @@ function bindSkeleton(liveMatches, standings) {
     usedFixtures.add(p.fid);
   }
 
-  return { ko, slots, bound, usedFixtures };
+  // Decided results per match number, so later-round feeders can resolve.
+  const results = new Map();
+  for (const s of slots) {
+    const r = decideResult(bound.get(s.no));
+    if (r) results.set(s.no, r);
+  }
+
+  return { ko, slots, bound, usedFixtures, results };
 }
 
 export function assembleBracket(liveMatches, standings) {
-  const { slots, bound } = bindSkeleton(liveMatches, standings);
+  const { slots, bound, results } = bindSkeleton(liveMatches, standings);
   return ROUNDS.map((round) => {
     const matches = slots
       .filter((s) => s.round === round.id)
       .sort((a, b) => a.t - b.t)
-      .map((s) => withMatchNo(bound.get(s.no), s) || placeholderTie(s, standings));
+      .map((s) => withMatchNo(bound.get(s.no), s) || placeholderTie(s, standings, results));
     return { ...round, matches };
   });
 }
@@ -172,12 +197,12 @@ function withMatchNo(fixture, slot) {
    the schedule populated past the group stage even before the feed publishes
    the knockout fixtures. Sorted by kickoff. */
 export function mergeKnockoutSchedule(liveMatches, standings) {
-  const { ko, slots, bound, usedFixtures } = bindSkeleton(liveMatches, standings);
+  const { ko, slots, bound, usedFixtures, results } = bindSkeleton(liveMatches, standings);
   const groupFixtures = (liveMatches || []).filter((m) => !isKnockoutFixture(m));
   const slotMatches = slots
     .slice()
     .sort((a, b) => a.t - b.t)
-    .map((s) => withMatchNo(bound.get(s.no), s) || placeholderTie(s, standings));
+    .map((s) => withMatchNo(bound.get(s.no), s) || placeholderTie(s, standings, results));
   // Any feed knockout fixture that didn't bind to a slot — keep it rather than
   // drop real data.
   const leftovers = ko.filter((f) => !usedFixtures.has(f.id));
