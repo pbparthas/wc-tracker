@@ -30,13 +30,19 @@ function shortName(name) {
 /* ── Goal scorers + red cards under the score ─────────────────────── */
 
 export function EventSummary({ events, match }) {
-  if (!events?.length) return null;
-  // Shootout kicks are kept out of the regulation goal list — otherwise a 1-1
-  // that went to penalties looks like a 6-6.
-  const goals = events.filter((e) => ["goal", "og", "pen"].includes(e.kind) && !e.shootout);
-  const reds = events.filter((e) => e.kind === "red" && !e.shootout);
-  const shoot = events.filter((e) => e.shootout && ["pen", "miss"].includes(e.kind));
-  if (!goals.length && !reds.length && !shoot.length) return null;
+  const wentToPens = match?.phg != null && match?.pag != null;
+  if (!events?.length && !wentToPens) return null;
+  const evs = events || [];
+  // A shootout kick: explicitly flagged, or (when the match went to pens) a
+  // penalty/miss timestamped in the shootout (120+). Kept OUT of the regulation
+  // goal list — otherwise a 1-1 that went to penalties looks like a 6-6.
+  const isShoot = (e) =>
+    e.shootout === true ||
+    (wentToPens && ["pen", "miss"].includes(e.kind) && /^120/.test(String(e.minute || "")));
+  const goals = evs.filter((e) => ["goal", "og", "pen"].includes(e.kind) && !isShoot(e));
+  const reds = evs.filter((e) => e.kind === "red" && !isShoot(e));
+  const shoot = evs.filter((e) => ["pen", "miss"].includes(e.kind) && isShoot(e));
+  if (!goals.length && !reds.length && !shoot.length && !wentToPens) return null;
 
   const homeGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.home) : isTeam(e, match.home)));
   const awayGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.away) : isTeam(e, match.away)));
@@ -65,7 +71,7 @@ export function EventSummary({ events, match }) {
           </div>
         </div>
       )}
-      {shoot.length > 0 && <ShootoutBlock shoot={shoot} match={match} />}
+      {(wentToPens || shoot.length > 0) && <ShootoutBlock shoot={shoot} match={match} />}
     </>
   );
 }
@@ -90,10 +96,14 @@ function ShootoutBlock({ shoot, match }) {
       <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--saffron)", textAlign: "center", marginBottom: 6, fontWeight: 700 }}>
         PENALTY SHOOTOUT · {ph}–{pa}{winner ? ` · ${winner} ADVANCE` : ""}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 12 }}>
-        <div>{homeKicks.map((e, i) => <Kick key={"hk" + i} e={e} align="left" />)}</div>
-        <div>{awayKicks.map((e, i) => <Kick key={"ak" + i} e={e} align="right" />)}</div>
-      </div>
+      {homeKicks.length || awayKicks.length ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 12 }}>
+          <div>{homeKicks.map((e, i) => <Kick key={"hk" + i} e={e} align="left" />)}</div>
+          <div>{awayKicks.map((e, i) => <Kick key={"ak" + i} e={e} align="right" />)}</div>
+        </div>
+      ) : (
+        <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>Kick-by-kick detail not available for this match.</div>
+      )}
     </div>
   );
 }
