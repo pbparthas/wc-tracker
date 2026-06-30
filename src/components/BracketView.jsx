@@ -15,7 +15,12 @@ function Tie({ m }) {
     );
   const p = istParts(m.kickoff);
   const done = m.state === "post";
-  const winner = done ? (m.hg > m.ag ? "home" : m.ag > m.hg ? "away" : null) : null;
+  // Shootout score breaks a level knockout tie so the bracket shows who advanced.
+  const pens = m.phg != null && m.pag != null;
+  const winner = done
+    ? (m.hg > m.ag ? "home" : m.ag > m.hg ? "away"
+      : pens ? (m.phg > m.pag ? "home" : m.pag > m.phg ? "away" : null) : null)
+    : null;
   // Skeleton slots with no live fixture yet: show the feeder labels ("Winner
   // Group A", "Winner Match 73") muted and don't link anywhere.
   const place = m.placeholder;
@@ -44,6 +49,7 @@ function Tie({ m }) {
           </span>
           <span className="sc" style={{ color: winner === side ? "var(--saffron)" : "var(--chalk)" }}>
             {place || m.state === "pre" ? "" : side === "home" ? m.hg : m.ag}
+            {!place && pens && <span style={{ fontSize: 10, fontWeight: 600 }}> ({side === "home" ? m.phg : m.pag})</span>}
           </span>
         </div>
       ))}

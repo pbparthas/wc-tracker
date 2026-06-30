@@ -28,7 +28,7 @@ export default function MatchDetailPage() {
   const schedMatch = matches.find((m) => m.id === id);
   const { summary, loading: sLoad } = useMatchSummary(id, schedMatch?.state);
   const match = schedMatch && summary?.match
-    ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag }
+    ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag, phg: summary.match.phg ?? schedMatch.phg, pag: summary.match.pag ?? schedMatch.pag }
     : schedMatch || summary?.match || null;
 
   // The FIFA match number, derived by binding this match to its knockout slot —
@@ -105,6 +105,11 @@ export default function MatchDetailPage() {
             {live && (
               <div className="disp" style={{ fontSize: 16, fontWeight: 700, color: "var(--live)", marginTop: 4, letterSpacing: "0.08em" }}>
                 {match.status}
+              </div>
+            )}
+            {match.phg != null && match.pag != null && (
+              <div className="disp" style={{ fontSize: 13, fontWeight: 700, color: "var(--saffron)", marginTop: 2 }}>
+                {match.phg}–{match.pag} on pens
               </div>
             )}
           </div>

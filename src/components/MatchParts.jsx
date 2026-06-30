@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { liveWinProbability, parseMatchMinute } from "../lib/winprob.js";
 
-const ICONS = { goal: "⚽", og: "⚽", pen: "⚽", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
+const ICONS = { goal: "⚽", og: "⚽", pen: "⚽", miss: "❌", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
 
 function isTeam(ev, team) {
   if (!ev.team) return false;
@@ -31,9 +31,12 @@ function shortName(name) {
 
 export function EventSummary({ events, match }) {
   if (!events?.length) return null;
-  const goals = events.filter((e) => ["goal", "og", "pen"].includes(e.kind));
-  const reds = events.filter((e) => e.kind === "red");
-  if (!goals.length && !reds.length) return null;
+  // Shootout kicks are kept out of the regulation goal list — otherwise a 1-1
+  // that went to penalties looks like a 6-6.
+  const goals = events.filter((e) => ["goal", "og", "pen"].includes(e.kind) && !e.shootout);
+  const reds = events.filter((e) => e.kind === "red" && !e.shootout);
+  const shoot = events.filter((e) => e.shootout && ["pen", "miss"].includes(e.kind));
+  if (!goals.length && !reds.length && !shoot.length) return null;
 
   const homeGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.home) : isTeam(e, match.home)));
   const awayGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.away) : isTeam(e, match.away)));
@@ -49,14 +52,47 @@ export function EventSummary({ events, match }) {
   );
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
-      <div>
-        {homeGoals.map((e, i) => <Row key={"hg" + i} icon="⚽" player={e.player} minute={e.minute} suffix={e.kind === "og" ? " (og)" : e.kind === "pen" ? " (p)" : ""} align="left" />)}
-        {homeReds.map((e, i) => <Row key={"hr" + i} icon="🟥" player={e.player} minute={e.minute} suffix="" align="left" />)}
+    <>
+      {(homeGoals.length > 0 || awayGoals.length > 0 || homeReds.length > 0 || awayReds.length > 0) && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
+          <div>
+            {homeGoals.map((e, i) => <Row key={"hg" + i} icon="⚽" player={e.player} minute={e.minute} suffix={e.kind === "og" ? " (og)" : e.kind === "pen" ? " (p)" : ""} align="left" />)}
+            {homeReds.map((e, i) => <Row key={"hr" + i} icon="🟥" player={e.player} minute={e.minute} suffix="" align="left" />)}
+          </div>
+          <div>
+            {awayGoals.map((e, i) => <Row key={"ag" + i} icon="⚽" player={e.player} minute={e.minute} suffix={e.kind === "og" ? " (og)" : e.kind === "pen" ? " (p)" : ""} align="right" />)}
+            {awayReds.map((e, i) => <Row key={"ar" + i} icon="🟥" player={e.player} minute={e.minute} suffix="" align="right" />)}
+          </div>
+        </div>
+      )}
+      {shoot.length > 0 && <ShootoutBlock shoot={shoot} match={match} />}
+    </>
+  );
+}
+
+/* Penalty shootout: each kick scored (✓) or missed (✗), with the result. */
+function ShootoutBlock({ shoot, match }) {
+  const homeKicks = shoot.filter((e) => isTeam(e, match.home));
+  const awayKicks = shoot.filter((e) => isTeam(e, match.away));
+  const scored = (list) => list.filter((e) => e.kind === "pen").length;
+  const ph = match?.phg ?? scored(homeKicks);
+  const pa = match?.pag ?? scored(awayKicks);
+  const winner = ph > pa ? match.home?.name : pa > ph ? match.away?.name : null;
+  const Kick = ({ e, align }) => (
+    <div style={{ display: "flex", gap: 5, justifyContent: align === "right" ? "flex-end" : "flex-start", color: e.kind === "pen" ? "var(--chalk)" : "var(--muted)" }}>
+      {align === "left" && <span>{e.kind === "pen" ? "✅" : "❌"}</span>}
+      <span>{shortName(e.player)}</span>
+      {align === "right" && <span>{e.kind === "pen" ? "✅" : "❌"}</span>}
+    </div>
+  );
+  return (
+    <div style={{ marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+      <div style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--saffron)", textAlign: "center", marginBottom: 6, fontWeight: 700 }}>
+        PENALTY SHOOTOUT · {ph}–{pa}{winner ? ` · ${winner} ADVANCE` : ""}
       </div>
-      <div>
-        {awayGoals.map((e, i) => <Row key={"ag" + i} icon="⚽" player={e.player} minute={e.minute} suffix={e.kind === "og" ? " (og)" : e.kind === "pen" ? " (p)" : ""} align="right" />)}
-        {awayReds.map((e, i) => <Row key={"ar" + i} icon="🟥" player={e.player} minute={e.minute} suffix="" align="right" />)}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px", fontSize: 12 }}>
+        <div>{homeKicks.map((e, i) => <Kick key={"hk" + i} e={e} align="left" />)}</div>
+        <div>{awayKicks.map((e, i) => <Kick key={"ak" + i} e={e} align="right" />)}</div>
       </div>
     </div>
   );

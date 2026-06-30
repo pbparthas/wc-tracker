@@ -64,12 +64,18 @@ function fixtureToMatch(f) {
   let stage = f.league?.round || "";
   if (!stage && home.group && home.group === away.group) stage = "Group " + home.group;
 
+  const pen = f.score?.penalty || {};
+
   return {
     id: ID_PREFIX + f.id,
     home,
     away,
     hg: state === "pre" ? null : (f.goals?.home ?? null),
     ag: state === "pre" ? null : (f.goals?.away ?? null),
+    // Penalty-shootout score (null when there was no shootout) — used to show
+    // the winner in knockout rounds where the 90/120-min score is level.
+    phg: pen.home ?? null,
+    pag: pen.away ?? null,
     state,
     status: mapStatus(f.status, f.elapsed),
     kickoff: f.date,
@@ -168,6 +174,7 @@ function mapEventKind(type, detail) {
   const t = (type || "").toLowerCase();
   const d = (detail || "").toLowerCase();
   if (t === "goal") {
+    if (d.includes("missed")) return "miss"; // missed penalty (shootout or in-play)
     if (d.includes("own goal")) return "og";
     if (d.includes("penalty")) return "pen";
     return "goal";
@@ -244,6 +251,8 @@ async function fetchApifSummary(fixtureId) {
         away: awayTeam,
         hg: state === "pre" ? null : (fixture.goals?.home ?? null),
         ag: state === "pre" ? null : (fixture.goals?.away ?? null),
+        phg: fixture.score?.penalty?.home ?? null,
+        pag: fixture.score?.penalty?.away ?? null,
         state,
         status: mapStatus(fixture.status, fixture.elapsed),
         kickoff: fixture.date,
@@ -266,6 +275,7 @@ async function fetchApifSummary(fixtureId) {
       out.events = events.map((e) => {
         const kind = mapEventKind(e.type, e.detail);
         const team = e.team ? resolveTeam({ name: e.team, displayName: e.team }) : null;
+        const shootout = /shootout/i.test(e.comments || "");
         return {
           kind,
           label: e.detail || e.type || "",
@@ -273,6 +283,7 @@ async function fetchApifSummary(fixtureId) {
           team,
           player: e.player || "",
           playerOut: kind === "sub" ? (e.assist || "") : "",
+          shootout,
           text: `${e.minute}' ${e.player}${e.assist ? " (" + e.assist + ")" : ""} — ${e.detail || e.type}`,
         };
       });

@@ -95,6 +95,7 @@ export async function fetchFixtureEvents(fixtureId) {
     assist: e.assist?.name || "",
     type: e.type || "",
     detail: e.detail || "",
+    comments: e.comments || "", // "Penalty Shootout" for shootout kicks
   }));
 }
 
