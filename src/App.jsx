@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import BottomTabs from "./components/BottomTabs.jsx";
+import Logo from "./components/Logo.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useOnlineStatus } from "./hooks/useOnlineStatus.js";
 
@@ -17,7 +18,7 @@ export default function App() {
       <header className="hdr">
         <div className="hdr-inner">
           <Link to="/" className="hdr-title disp">
-            GOLA<span>ZO</span> <span style={{ fontSize: 14 }}>⚽</span>
+            GOLA<span>ZO</span> <Logo size={18} />
           </Link>
           <Link to="/settings" className="gear" aria-label="Settings">⚙️</Link>
         </div>
