@@ -194,7 +194,10 @@ export async function fetchSummary(eventId, league) {
   return espn.fetchSummary(eventId, league);
 }
 
+const espnIdMemo = new Map();
+
 async function findEspnId(fixture) {
+  if (espnIdMemo.has(fixture.id)) return espnIdMemo.get(fixture.id);
   try {
     const date = fixture.date.slice(0, 10).replace(/-/g, "");
     const matches = await espn.fetchScoreboard(date, date);
@@ -206,6 +209,8 @@ async function findEspnId(fixture) {
       return (mh.includes(homeName) || homeName.includes(mh))
           && (ma.includes(awayName) || awayName.includes(ma));
     });
+    // Memoise hits only — a miss may just mean ESPN hasn't listed it yet.
+    if (found?.id) espnIdMemo.set(fixture.id, found.id);
     return found?.id || null;
   } catch {
     return null;
@@ -387,8 +392,15 @@ async function fetchApifSummary(fixtureId) {
     };
 
     // ESPN supplement (best-effort): fill the timeline and stats when
-    // API-Football hasn't populated them yet, and add commentary.
-    const espnSummary = await espnSummaryPromise;
+    // API-Football hasn't populated them yet, and add commentary. Time-boxed:
+    // the API-Football data above is complete and renderable, and a slow ESPN
+    // response used to hold the WHOLE summary hostage — goal scorers, lineups
+    // and stats all blank until ESPN answered. If it loses the race, this poll
+    // ships without commentary and the next one (60s live) fills it in.
+    const espnSummary = await Promise.race([
+      espnSummaryPromise,
+      new Promise((resolve) => setTimeout(() => resolve(null), 3000)),
+    ]);
     if (espnSummary) {
       if (!out.events?.length && espnSummary.events?.length) out.events = espnSummary.events;
       if (!out.stats?.length && espnSummary.stats?.length) out.stats = espnSummary.stats;

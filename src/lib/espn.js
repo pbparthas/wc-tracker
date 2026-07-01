@@ -10,7 +10,16 @@ async function getJson(url) {
   // no-store: we poll the same URLs for live data, and the browser HTTP cache
   // happily replays a cached body for the polling interval if ESPN sends a
   // max-age — the app then "refreshes" into the same stale score.
-  const res = await fetch(url, { cache: "no-store" });
+  // The timeout matters: ESPN occasionally hangs, and an unbounded fetch can
+  // block anything awaiting it (the match summary used to stall on this).
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  let res;
+  try {
+    res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
