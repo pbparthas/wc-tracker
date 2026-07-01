@@ -53,7 +53,10 @@ async function rawApiFetch(endpoint, params) {
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   let res;
   try {
-    res = await fetch(url, { signal: ctrl.signal });
+    // no-store, same as the ESPN client: we poll these URLs during live play,
+    // and any cacheable response would be replayed by the browser — an empty
+    // early-match events body kept showing at the 87th minute.
+    res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
   } finally {
     clearTimeout(timer);
   }

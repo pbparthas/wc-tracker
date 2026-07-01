@@ -18,9 +18,22 @@ export function useMatchSummary(eventId, state) {
     setError(null);
     try {
       const s = await fetchSummary(eventId);
-      setSummary(s);
-      if (state === "post") cacheSet(key, s);
-      else cacheSet(key, s, 5 * 60 * 1000);
+      // Merge over the previous summary: live data never goes backwards, so a
+      // poll where one sub-call flaked (events/lineups/stats null) must not
+      // blank sections that were already on screen.
+      setSummary((prev) => {
+        const merged = !prev ? s : {
+          ...s,
+          events: s.events ?? prev.events,
+          lineups: s.lineups ?? prev.lineups,
+          stats: s.stats ?? prev.stats,
+          playerStats: s.playerStats ?? prev.playerStats,
+          commentary: s.commentary ?? prev.commentary,
+        };
+        if (state === "post") cacheSet(key, merged);
+        else cacheSet(key, merged, 5 * 60 * 1000);
+        return merged;
+      });
     } catch (e) {
       setError(e.message || String(e));
     }

@@ -408,8 +408,11 @@ async function fetchApifSummary(fixtureId) {
     }
 
     return out;
-  } catch {
-    return espn.fetchSummary(fixtureId);
+  } catch (e) {
+    // Do NOT fall back to espn.fetchSummary(fixtureId): that's an API-Football
+    // id, and ESPN's id space collides — it could return a different match.
+    // Rethrow; useMatchSummary keeps the previous good summary on error.
+    throw e;
   }
 }
 
