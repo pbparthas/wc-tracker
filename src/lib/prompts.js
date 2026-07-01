@@ -312,3 +312,22 @@ export function espnDownPrompt() {
     "Only report what you find from search results dated today or yesterday."
   );
 }
+
+/* Post-tournament recap for the home archive card — everything it needs is in
+   the played results, so no search grounding required. */
+export function tournamentRecapPrompt(championName, matches) {
+  const ko = (matches || [])
+    .filter((m) => m.state === "post" && /round of 32|round of 16|quarter|semi|third|final/i.test(m.stage || ""))
+    .map((m) => {
+      const pens = m.phg != null && m.pag != null ? ` (${m.phg}-${m.pag} pens)` : "";
+      return `- ${m.stage}: ${m.home.name} ${m.hg}-${m.ag} ${m.away.name}${pens}`;
+    });
+  return [
+    "The FIFA World Cup 2026 has finished. Write a celebratory but factual recap of the tournament for fans revisiting it.",
+    championName ? `Champions (authoritative): ${championName}.` : "",
+    "Knockout results (authoritative — use ONLY these, do not invent scores or scorers):",
+    ...ko,
+    "Cover: the champions and how their run went, the final itself, the biggest upsets and shootout dramas visible in the results above.",
+    "150-220 words.",
+  ].filter(Boolean).join("\n");
+}

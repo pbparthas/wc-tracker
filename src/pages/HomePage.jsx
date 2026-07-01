@@ -7,6 +7,9 @@ import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
 import { mergeKnockoutSchedule, assembleBracket } from "../lib/bracket.js";
 import { istParts } from "../lib/time.js";
+import AiCard from "../components/AiCard.jsx";
+import { useAiContent } from "../hooks/useAiContent.js";
+import { tournamentRecapPrompt } from "../lib/prompts.js";
 
 /* Club leagues that are live in the app (transfers + table + clubs + matches). */
 const CLUB_LEAGUES = ["epl", "laliga", "bundesliga", "seriea", "ligue1"];
@@ -92,6 +95,11 @@ export default function HomePage() {
     }
     return null;
   }, [matches, standings]);
+
+  const recap = useAiContent(
+    "wcRecap2026",
+    () => tournamentRecapPrompt(progress?.champion, merged)
+  );
 
   const todayKey = istParts(new Date().toISOString())?.dateKey;
   const todayCount = merged.filter((m) => istParts(m.kickoff)?.dateKey === todayKey).length;
@@ -222,7 +230,12 @@ export default function HomePage() {
         ))}
       </div>
 
-      {phase === "archive" && <div style={{ marginTop: 14 }}>{WcCard}</div>}
+      {phase === "archive" && (
+        <div style={{ marginTop: 14 }}>
+          {WcCard}
+          <AiCard title="How the tournament went" ai={recap} cta="✨ Recap the World Cup" />
+        </div>
+      )}
       <div style={{ height: 20 }} />
     </div>
   );

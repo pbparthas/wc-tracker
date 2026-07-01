@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import MatchRow from "../../components/MatchRow.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
@@ -6,7 +6,54 @@ import { fetchLeagueMatches } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 import { useResume } from "../../hooks/useResume.js";
-import { istParts, IST } from "../../lib/time.js";
+import { istParts, istDateKey, IST } from "../../lib/time.js";
+
+const DAY = 86400000;
+
+/* Group a match list by IST date, keeping the incoming order. */
+function groupByDay(list) {
+  const byDate = new Map();
+  for (const m of list) {
+    const p = istParts(m.kickoff);
+    const key = p?.dateKey || m.kickoff?.slice(0, 10) || "unknown";
+    if (!byDate.has(key)) byDate.set(key, { label: p?.day || key, matches: [] });
+    byDate.get(key).matches.push(m);
+  }
+  return [...byDate.values()];
+}
+
+function DayGroups({ groups, isFav, linkBase }) {
+  return groups.map((g) => (
+    <div key={g.label} style={{ marginBottom: 16 }}>
+      <div className="eyebrow" style={{ marginBottom: 6 }}>{g.label}</div>
+      {g.matches.map((m) => (
+        <MatchRow key={m.id} m={m} fav={isFav(m)} linkBase={linkBase} />
+      ))}
+    </div>
+  ));
+}
+
+/* Collapsed-by-default section — a full club season is ~380 fixtures, so only
+   the near-term window renders expanded; history and the far future fold away. */
+function Collapsible({ label, count, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  if (!count) return null;
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <button
+        className="ai-toggle"
+        onClick={() => setOpen((o) => !o)}
+        style={{ width: "100%", padding: "10px 0", borderTop: "1px solid var(--line)", fontSize: 13 }}
+      >
+        <span className="disp" style={{ fontWeight: 800, letterSpacing: "0.04em" }}>
+          {label} <span style={{ color: "var(--muted)", fontWeight: 600 }}>({count})</span>
+        </span>
+        <span className="ai-chev">{open ? "▾ hide" : "▸ show"}</span>
+      </button>
+      {open && children}
+    </div>
+  );
+}
 
 export default function LeagueMatchesPage() {
   const { comp } = useParams();
@@ -19,16 +66,26 @@ export default function LeagueMatchesPage() {
 
   const anyLive = (matches || []).some((m) => m.state === "in");
 
-  const groups = useMemo(() => {
-    if (!matches?.length) return [];
-    const byDate = new Map();
-    for (const m of matches) {
-      const p = istParts(m.kickoff);
-      const key = p?.dateKey || m.kickoff?.slice(0, 10) || "unknown";
-      if (!byDate.has(key)) byDate.set(key, { label: p?.day || key, matches: [] });
-      byDate.get(key).matches.push(m);
-    }
-    return [...byDate.values()];
+  const { live, todayG, soonG, laterG, laterCount, resultsG, resultsCount } = useMemo(() => {
+    const list = matches || [];
+    const today = istDateKey();
+    const weekOut = istDateKey(new Date(Date.now() + 7 * DAY));
+    const live = list.filter((m) => m.state === "in");
+    const done = list.filter((m) => m.state === "post");
+    const pre = list.filter((m) => m.state === "pre");
+    const dayOf = (m) => istParts(m.kickoff)?.dateKey || "";
+    const todayList = pre.filter((m) => dayOf(m) === today);
+    const soon = pre.filter((m) => dayOf(m) > today && dayOf(m) <= weekOut);
+    const later = pre.filter((m) => dayOf(m) > weekOut);
+    return {
+      live,
+      todayG: groupByDay(todayList),
+      soonG: groupByDay(soon),
+      laterG: groupByDay(later),
+      laterCount: later.length,
+      resultsG: groupByDay([...done].reverse()), // newest results first
+      resultsCount: done.length,
+    };
   }, [matches]);
 
   const isFav = (m) => {
@@ -38,6 +95,7 @@ export default function LeagueMatchesPage() {
   };
 
   const noFixtures = !loading && (!matches || matches.length === 0) && !error;
+  const linkBase = `/league/${C.id}/match`;
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
@@ -71,7 +129,7 @@ export default function LeagueMatchesPage() {
           </div>
           <p style={{ fontSize: 13, marginBottom: 8 }}>
             {C.season.fixturesNote} Once the fixture list drops, this tab gets the full treatment:
-            matchweek-by-matchweek fixtures in IST, live scores, stats, lineups and AI previews.
+            fixtures in IST, live scores, stats, lineups and AI previews.
           </p>
           <p style={{ color: "var(--muted)", fontSize: 13 }}>
             The transfer window is where the action is right now — <Link to={`/league/${C.id}`}>follow the transfers</Link>.
@@ -79,14 +137,34 @@ export default function LeagueMatchesPage() {
         </div>
       )}
 
-      {groups.map((g) => (
-        <div key={g.label} style={{ marginBottom: 16 }}>
-          <div className="eyebrow" style={{ marginBottom: 6 }}>{g.label}</div>
-          {g.matches.map((m) => (
-            <MatchRow key={m.id} m={m} fav={isFav(m)} linkBase={`/league/${C.id}/match`} />
-          ))}
-        </div>
-      ))}
+      {live.length > 0 && (
+        <>
+          <h2 className="disp section-h" style={{ color: "var(--live)" }}>LIVE NOW</h2>
+          {live.map((m) => <MatchRow key={m.id} m={m} fav={isFav(m)} linkBase={linkBase} />)}
+        </>
+      )}
+
+      {todayG.length > 0 && (
+        <>
+          <h2 className="disp section-h">TODAY</h2>
+          <DayGroups groups={todayG} isFav={isFav} linkBase={linkBase} />
+        </>
+      )}
+
+      {soonG.length > 0 && (
+        <>
+          <h2 className="disp section-h">THIS WEEK</h2>
+          <DayGroups groups={soonG} isFav={isFav} linkBase={linkBase} />
+        </>
+      )}
+
+      <Collapsible label="LATER FIXTURES" count={laterCount}>
+        <DayGroups groups={laterG} isFav={isFav} linkBase={linkBase} />
+      </Collapsible>
+
+      <Collapsible label="RESULTS" count={resultsCount}>
+        <DayGroups groups={resultsG} isFav={isFav} linkBase={linkBase} />
+      </Collapsible>
 
       {matches?.length > 0 && (
         <p style={{ fontSize: 11, color: "var(--muted)", margin: "10px 0 20px" }}>

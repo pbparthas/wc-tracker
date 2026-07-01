@@ -1,17 +1,10 @@
 /* API-Football via Cloudflare Worker proxy.
    The proxy holds the API key as a secret — nothing sensitive in the browser. */
 
-const PROXY_KEY = "golazo:apifootball:proxy";
-const DEFAULT_PROXY = "https://golazo-api-proxy.pbparthas.workers.dev";
-
-export function getProxyUrl() {
-  return localStorage.getItem(PROXY_KEY) || DEFAULT_PROXY;
-}
-
-export function setProxyUrl(url) {
-  if (url && url !== DEFAULT_PROXY) localStorage.setItem(PROXY_KEY, url);
-  else localStorage.removeItem(PROXY_KEY);
-}
+/* Fixed: the production CSP's connect-src only whitelists this host, so a
+   configurable proxy URL was a trap — any custom value would be silently
+   blocked by the browser. */
+const PROXY = "https://golazo-api-proxy.pbparthas.workers.dev";
 
 /* Rate-guard every API-Football request through one queue so a burst can't spike
    the per-minute limit. A screen can want several calls at once (a match summary
@@ -53,10 +46,8 @@ function apiFetch(endpoint, params = {}) {
 }
 
 async function rawApiFetch(endpoint, params) {
-  const proxy = getProxyUrl();
-  if (!proxy) throw new Error("No proxy URL configured");
   const qs = new URLSearchParams(params).toString();
-  const url = `${proxy}/${endpoint}${qs ? "?" + qs : ""}`;
+  const url = `${PROXY}/${endpoint}${qs ? "?" + qs : ""}`;
   // A hung request would otherwise block the whole serial queue.
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
