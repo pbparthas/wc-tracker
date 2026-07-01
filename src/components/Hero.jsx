@@ -40,13 +40,13 @@ export default function Hero({ matches }) {
         position: "relative",
         overflow: "hidden",
         borderBottom: "1px solid var(--line)",
-        background: "linear-gradient(180deg,#10241B 0%,#0B1512 100%)",
+        background: "linear-gradient(180deg, var(--grad-hi) 0%, var(--grad-lo) 100%)",
       }}
     >
       <svg aria-hidden="true" viewBox="0 0 680 220" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.14 }}>
-        <circle cx="340" cy="260" r="190" fill="none" stroke="#EDF3EA" strokeWidth="2" />
-        <line x1="0" y1="218" x2="680" y2="218" stroke="#EDF3EA" strokeWidth="2" />
-        <circle cx="340" cy="260" r="4" fill="#EDF3EA" />
+        <circle cx="340" cy="260" r="190" fill="none" stroke="var(--chalk)" strokeWidth="2" />
+        <line x1="0" y1="218" x2="680" y2="218" stroke="var(--chalk)" strokeWidth="2" />
+        <circle cx="340" cy="260" r="4" fill="var(--chalk)" />
       </svg>
       <div className="wrap" style={{ position: "relative", padding: "18px 14px 22px" }}>
         <div className="eyebrow" style={{ marginBottom: 2 }}>FIFA World Cup 2026 · USA · Mexico · Canada</div>

@@ -143,7 +143,7 @@ function PlayerInfo({ player, events, subMinute, playerStats, match, onClose }) 
         {player.headshot ? (
           <img src={player.headshot} alt="" width={64} height={64} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0, background: "#222", border: "2px solid var(--line)" }} />
         ) : (
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--pitch)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, flexShrink: 0, border: "2px solid var(--line)" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--pitch)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700, flexShrink: 0, border: "2px solid var(--line)" }}>
             {player.jersey || "?"}
           </div>
         )}
@@ -661,7 +661,7 @@ export function TopPerformers({ lineups, playerStats }) {
             <img src={p.headshot} alt="" width={36} height={36} loading="lazy"
               style={{ borderRadius: "50%", objectFit: "cover", background: "#222", flexShrink: 0, border: "1.5px solid var(--line)" }} />
           ) : (
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--pitch)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{p.jersey || "?"}</div>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--pitch)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{p.jersey || "?"}</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

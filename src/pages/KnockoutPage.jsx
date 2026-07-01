@@ -32,7 +32,7 @@ export default function KnockoutPage() {
             padding: "12px 14px",
             marginBottom: 8,
             borderColor: ph.final ? "var(--gold)" : "var(--line)",
-            background: ph.final ? "linear-gradient(135deg,#1A1F12,#13211A)" : "var(--card)",
+            background: ph.final ? "linear-gradient(135deg, var(--grad-hi), var(--grad-lo))" : "var(--card)",
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>

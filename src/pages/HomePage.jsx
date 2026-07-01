@@ -23,7 +23,7 @@ export default function HomePage() {
         tabIndex={0}
         onClick={() => navigate("/matches")}
         onKeyDown={(e) => e.key === "Enter" && navigate("/matches")}
-        style={{ padding: 18, marginBottom: 14, cursor: "pointer", background: "linear-gradient(180deg,#10241B 0%,#13211A 100%)" }}
+        style={{ padding: 18, marginBottom: 14, cursor: "pointer", background: "linear-gradient(180deg, var(--grad-hi) 0%, var(--grad-lo) 100%)" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span className="eyebrow" style={{ color: "var(--saffron)" }}>USA · Mexico · Canada</span>
@@ -56,12 +56,12 @@ export default function HomePage() {
             tabIndex={0}
             onClick={() => navigate(`/league/${id}`)}
             onKeyDown={(e) => e.key === "Enter" && navigate(`/league/${id}`)}
-            style={{ padding: 16, marginBottom: 8, cursor: "pointer", background: "linear-gradient(180deg,#241a3d 0%,#181229 100%)" }}
+            style={{ padding: 16, marginBottom: 8, cursor: "pointer", background: "var(--card)" }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span className="eyebrow" style={{ color: "#bfb3d9" }}>{c.season.label}</span>
+              <span className="eyebrow">{c.season.label}</span>
               {open && (
-                <span className="eyebrow" style={{ color: "#00e586" }}>
+                <span className="eyebrow" style={{ color: "#0b7a45" }}>
                   <span className="pulse">●</span> Window open
                 </span>
               )}

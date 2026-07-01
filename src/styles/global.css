@@ -1,49 +1,32 @@
-/* Golazo · "Night Pitch" design system — phone-only, dark, IST-first */
+/* Golazo · "Matchday Programme" design system — phone-only, warm paper + ink,
+   IST-first. Legacy token names kept to avoid a mass rename: --chalk is the ink
+   text colour, --saffron is the accent (deep programme red). --pitch is the one
+   token that stays green in every theme — it paints literal pitch elements
+   (jersey circles, the field). */
 :root {
-  --bg: #0b1512;
-  --card: #13211a;
-  --line: rgba(232, 239, 230, 0.09);
-  --chalk: #edf3ea;
-  --muted: #8fa396;
-  --saffron: #ff9d3c;
-  --gold: #d9b64a;
-  --live: #ff5a5a;
-  --pitch: #1e4633;
+  --bg: #e2d6ba;
+  --card: #efe7d2;
+  --line: rgba(35, 38, 28, 0.18);
+  --chalk: #23281f;
+  --muted: #6d7261;
+  --saffron: #a83226;
+  --gold: #8a6d1f;
+  --live: #b52222;
+  --pitch: #1e6b3c;
+  --btn-bg: #e6dbc0;
+  --accent-ink: #faf6ea;
+  --chrome: rgba(226, 214, 186, 0.96);
+  --grad-hi: #d8caa4;
+  --grad-lo: #e2d6ba;
 }
 
-/* Per-competition identity: same Night Pitch chassis, different accent.
-   The Premier League wears its electric green on purple-tinted cards. */
-[data-comp="epl"] {
-  --saffron: #00e586;
-  --pitch: #2b1f42;
-  --card: #181229;
-  --line: rgba(230, 226, 240, 0.1);
-}
-/* Same club-league chassis, different accent per league. */
-[data-comp="laliga"] {
-  --saffron: #ff8a3d;
-  --pitch: #2b1f42;
-  --card: #181229;
-  --line: rgba(230, 226, 240, 0.1);
-}
-[data-comp="bundesliga"] {
-  --saffron: #ff4d4d;
-  --pitch: #2b1f42;
-  --card: #181229;
-  --line: rgba(230, 226, 240, 0.1);
-}
-[data-comp="seriea"] {
-  --saffron: #4a90e2;
-  --pitch: #2b1f42;
-  --card: #181229;
-  --line: rgba(230, 226, 240, 0.1);
-}
-[data-comp="ligue1"] {
-  --saffron: #16c8aa;
-  --pitch: #2b1f42;
-  --card: #181229;
-  --line: rgba(230, 226, 240, 0.1);
-}
+/* Per-competition identity: same paper chassis, a different accent per league —
+   deep print-ink shades that hold contrast on the beige. */
+[data-comp="epl"] { --saffron: #0b7a45; }
+[data-comp="laliga"] { --saffron: #c2571d; }
+[data-comp="bundesliga"] { --saffron: #b02525; }
+[data-comp="seriea"] { --saffron: #1f5fa8; }
+[data-comp="ligue1"] { --saffron: #0c7a68; }
 
 .zdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: baseline; }
 
@@ -67,7 +50,7 @@ body { background: var(--bg); overscroll-behavior-y: none; }
 a { color: var(--saffron); }
 
 .btn {
-  background: var(--pitch);
+  background: var(--btn-bg);
   color: var(--chalk);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -81,10 +64,10 @@ a { color: var(--saffron); }
 .btn:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn.ghost { background: transparent; }
-.btn.accent { background: var(--saffron); color: #1a1208; border-color: transparent; }
+.btn.accent { background: var(--saffron); color: var(--accent-ink); border-color: transparent; }
 
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
-.card.fav { border-color: rgba(255, 157, 60, 0.4); }
+.card.fav { border-color: color-mix(in srgb, var(--saffron) 45%, transparent); }
 .card.error { border-color: var(--live); }
 
 .pulse { animation: pulse 1.4s ease-in-out infinite; }
@@ -96,7 +79,7 @@ a { color: var(--saffron); }
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(11, 21, 18, 0.96);
+  background: var(--chrome);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
@@ -111,7 +94,7 @@ a { color: var(--saffron); }
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(11, 21, 18, 0.96);
+  background: var(--chrome);
   backdrop-filter: blur(8px);
   border-top: 1px solid var(--line);
   display: flex;
@@ -145,7 +128,7 @@ table { width: 100%; border-collapse: collapse; }
 th { font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; font-weight: 600; padding: 6px 4px; text-align: center; }
 td { padding: 7px 4px; text-align: center; font-variant-numeric: tabular-nums; border-top: 1px solid var(--line); font-size: 13px; }
 td.tname, th.tname { text-align: left; }
-.qline td { border-top: 1px dashed rgba(255, 157, 60, 0.45); }
+.qline td { border-top: 1px dashed color-mix(in srgb, var(--saffron) 50%, transparent); }
 
 /* Date pager */
 .pager { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -164,7 +147,7 @@ td.tname, th.tname { text-align: left; }
 }
 .pager-day .dow { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
 .pager-day .dm { font-size: 13px; font-weight: 700; color: var(--chalk); margin-top: 2px; white-space: nowrap; }
-.pager-day.on { border-color: var(--saffron); background: rgba(255, 157, 60, 0.08); }
+.pager-day.on { border-color: var(--saffron); background: color-mix(in srgb, var(--saffron) 9%, transparent); }
 .pager-day.on .dm { color: var(--saffron); }
 .pager-day.today .dow { color: var(--saffron); }
 
@@ -219,14 +202,14 @@ td.tname, th.tname { text-align: left; }
 .check input { width: 20px; height: 20px; accent-color: var(--saffron); }
 
 /* Banners & toast */
-.banner { background: rgba(255, 157, 60, 0.12); border-bottom: 1px solid rgba(255, 157, 60, 0.3); color: var(--saffron); font-size: 12px; text-align: center; padding: 6px 14px; }
+.banner { background: color-mix(in srgb, var(--saffron) 12%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--saffron) 30%, transparent); color: var(--saffron); font-size: 12px; text-align: center; padding: 6px 14px; }
 .toast {
   position: fixed;
   bottom: calc(92px + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   z-index: 60;
-  background: var(--pitch);
+  background: var(--card);
   border: 1px solid var(--saffron);
   border-radius: 10px;
   padding: 10px 14px;

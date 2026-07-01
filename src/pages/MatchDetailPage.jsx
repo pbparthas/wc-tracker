@@ -52,12 +52,14 @@ export default function MatchDetailPage() {
     ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag, phg: summary.match.phg ?? schedMatch.phg, pag: summary.match.pag ?? schedMatch.pag }
     : schedMatch || summary?.match || null;
 
-  // The FIFA match number, derived by binding this match to its knockout slot —
-  // matches the "Match 76" shown on the bracket and Matches-tab cards.
-  const koMatchNo = useMemo(
-    () => mergeKnockoutSchedule(matches, standings).find((m) => m.id === id)?.matchNo ?? null,
+  // The knockout slot this match bound to: carries the FIFA match number and
+  // the normalised round label (feeds mislabel rounds; the skeleton doesn't).
+  const koMatch = useMemo(
+    () => mergeKnockoutSchedule(matches, standings).find((m) => m.id === id) ?? null,
     [matches, standings, id]
   );
+  const koMatchNo = koMatch?.matchNo ?? null;
+  const stageLabel = koMatch?.stage || match?.stage;
 
   const preview = useAiContent("preview2:" + id, () => previewPrompt(match, standings));
   const recap = useAiContent("recap:" + id, () => recapPrompt(match, summary));
@@ -114,7 +116,7 @@ export default function MatchDetailPage() {
 
       <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: live ? "var(--live)" : undefined }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-          <span className="eyebrow">{match.stage}{koMatchNo ? " · Match " + koMatchNo : ""}{match.city ? " · " + match.city : ""}</span>
+          <span className="eyebrow">{stageLabel}{koMatchNo ? " · Match " + koMatchNo : ""}{match.city ? " · " + match.city : ""}</span>
           <StatusPill status={match.status} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8, textAlign: "center" }}>
