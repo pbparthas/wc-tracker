@@ -129,19 +129,6 @@ export default function HomePage() {
             ? `${progress.label} · ${progress.played} of ${progress.total} played · final at MetLife, 19 July`
             : "48 teams · 104 matches · 11 June – 19 July · all times IST"}
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-        <span className="btn accent" style={{ display: "inline-block" }}>Matches →</span>
-        <span
-          className="btn"
-          role="link"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); navigate("/knockout"); }}
-          onKeyDown={(e) => e.key === "Enter" && (e.stopPropagation(), navigate("/knockout"))}
-          style={{ display: "inline-block" }}
-        >
-          Bracket
-        </span>
-      </div>
     </div>
   ) : (
     <div
@@ -162,7 +149,7 @@ export default function HomePage() {
   const quick = [
     ["🗓", "Matches", "/matches"],
     ["🏆", "Bracket", "/knockout"],
-    ["👟", "Golden Boot", "/groups"],
+    ["👟", "Golden Boot", "/goldenboot"],
     ["★", "My teams", "/yourteams"],
   ];
 

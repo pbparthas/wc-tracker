@@ -757,20 +757,23 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam, match }) {
       </div>
 
       <div style={{ marginBottom: 8 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", fontSize: 13, marginBottom: 4 }}>
-          <b style={{ textAlign: "left", color: homeW >= awayW ? "var(--chalk)" : "var(--muted)" }}>{homeTeam?.name || "Home"}</b>
-          <span style={{ color: "var(--muted)", fontSize: 11, padding: "0 8px", alignSelf: "center" }}>Draw</span>
-          <b style={{ textAlign: "right", color: awayW > homeW ? "var(--chalk)" : "var(--muted)" }}>{awayTeam?.name || "Away"}</b>
+        {/* Numbers live WITH the names, not on a positional row under the bar —
+            a centred "Draw 7%" used to claim the middle of the card even when
+            its sliver sat far off to one side, and segment-aligned labels
+            collide when two slivers are tiny. The bar alone shows proportion. */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", fontSize: 13, marginBottom: 4, fontVariantNumeric: "tabular-nums" }}>
+          <b style={{ textAlign: "left", color: homeW >= awayW ? "var(--chalk)" : "var(--muted)" }}>
+            {homeTeam?.name || "Home"} <span style={{ fontWeight: 800 }}>{lbl(homeW)}</span>
+          </b>
+          <span style={{ color: "var(--muted)", fontSize: 11, padding: "0 8px", alignSelf: "center" }}>draw {lbl(draw)}</span>
+          <b style={{ textAlign: "right", color: awayW > homeW ? "var(--chalk)" : "var(--muted)" }}>
+            <span style={{ fontWeight: 800 }}>{lbl(awayW)}</span> {awayTeam?.name || "Away"}
+          </b>
         </div>
         <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", gap: 2 }}>
           <div style={{ width: `${(homeW / total) * 100}%`, background: "#2e7d32" }} />
           <div style={{ width: `${(draw / total) * 100}%`, background: "var(--muted)" }} />
           <div style={{ width: `${(awayW / total) * 100}%`, background: "#1565c0" }} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", fontSize: 12, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
-          <span style={{ color: homeW >= awayW ? "var(--chalk)" : "var(--muted)" }}>{lbl(homeW)}</span>
-          <span style={{ color: "var(--muted)", textAlign: "center" }}>{lbl(draw)}</span>
-          <span style={{ textAlign: "right", color: awayW > homeW ? "var(--chalk)" : "var(--muted)" }}>{lbl(awayW)}</span>
         </div>
       </div>
 

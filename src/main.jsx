@@ -24,6 +24,7 @@ const TeamsPage = React.lazy(() => import("./pages/TeamsPage.jsx"));
 const YourTeamsPage = React.lazy(() => import("./pages/YourTeamsPage.jsx"));
 const TeamPage = React.lazy(() => import("./pages/TeamPage.jsx"));
 const SettingsPage = React.lazy(() => import("./pages/SettingsPage.jsx"));
+const GoldenBootPage = React.lazy(() => import("./pages/GoldenBootPage.jsx"));
 const TransfersPage = React.lazy(() => import("./pages/league/TransfersPage.jsx"));
 const LeagueMatchesPage = React.lazy(() => import("./pages/league/LeagueMatchesPage.jsx"));
 const TablePage = React.lazy(() => import("./pages/league/TablePage.jsx"));
@@ -83,6 +84,7 @@ const router = createHashRouter([
       { path: "yourteams", element: <YourTeamsPage /> },
       { path: "team/:code", element: <TeamPage /> },
       { path: "settings", element: <SettingsPage /> },
+      { path: "goldenboot", element: <GoldenBootPage /> },
       { path: "league/:comp", element: <TransfersPage /> },
       { path: "league/:comp/matches", element: <LeagueMatchesPage /> },
       { path: "league/:comp/table", element: <TablePage /> },
