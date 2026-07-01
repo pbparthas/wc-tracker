@@ -20,6 +20,30 @@
   --grad-lo: #e2d6ba;
 }
 
+/* "Lights out": the same Programme system printed in negative — warm ink
+   paper, cream text, the red lifted just enough to hold contrast. --pitch stays
+   green here too. Toggled from Settings via <html data-mode="dark">. */
+:root[data-mode="dark"] {
+  --bg: #171410;
+  --card: #211d16;
+  --line: rgba(236, 228, 207, 0.15);
+  --chalk: #ece4cf;
+  --muted: #a1977f;
+  --saffron: #d4604a;
+  --gold: #d9b64a;
+  --live: #ff5a5a;
+  --btn-bg: #2b261d;
+  --accent-ink: #fff6e8;
+  --chrome: rgba(23, 20, 16, 0.96);
+  --grad-hi: #2c2618;
+  --grad-lo: #171410;
+}
+:root[data-mode="dark"] [data-comp="epl"] { --saffron: #2fbf7f; }
+:root[data-mode="dark"] [data-comp="laliga"] { --saffron: #e8813f; }
+:root[data-mode="dark"] [data-comp="bundesliga"] { --saffron: #e05252; }
+:root[data-mode="dark"] [data-comp="seriea"] { --saffron: #5b9bd9; }
+:root[data-mode="dark"] [data-comp="ligue1"] { --saffron: #2fb9a4; }
+
 /* Per-competition identity: same paper chassis, a different accent per league —
    deep print-ink shades that hold contrast on the beige. */
 [data-comp="epl"] { --saffron: #0b7a45; }

@@ -37,7 +37,7 @@ export function cacheRemove(key) {
 /* User settings and UX flags survive a cache clear; only data does not.
    "favs" covers per-competition lists too (wc26:favs:epl, ...). */
 const KEEP = new Set(
-  ["geminiKey", "geminiModel", "welcomed", "installDismissed"].map((k) => PREFIX + k)
+  ["geminiKey", "geminiModel", "welcomed", "installDismissed", "mode"].map((k) => PREFIX + k)
 );
 
 export function clearPrefix(sub = "") {

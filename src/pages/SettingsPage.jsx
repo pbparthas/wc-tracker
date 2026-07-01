@@ -5,6 +5,7 @@ import {
   getModel, setModel, testKey, DEFAULT_MODEL,
 } from "../lib/gemini.js";
 import { clearPrefix } from "../lib/storage.js";
+import { getMode, applyMode } from "../lib/theme.js";
 import { useFavorites } from "../hooks/useFavorites.js";
 import { GROUPS, TEAMS } from "../data/teams.js";
 import InstallCard from "../components/InstallCard.jsx";
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const [cleared, setCleared] = useState(null);
   const [shared, setShared] = useState(null);
   const [persist, setPersist] = useState(null); // null = unknown/unsupported, true/false otherwise
+  const [mode, setMode] = useState(getMode);
   const { favs, toggle } = useFavorites();
 
   useEffect(() => {
@@ -149,6 +151,25 @@ export default function SettingsPage() {
         <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 12 }}>
           🔒 Your key is stored only on this device and sent only to Google (in a header, never a URL).
           It never touches this app's servers — there are none.
+        </p>
+      </div>
+
+      <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+        <div className="eyebrow" style={{ marginBottom: 10 }}>Appearance</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[["paper", "📰 Paper"], ["dark", "🌙 Lights out"]].map(([m, label]) => (
+            <button
+              key={m}
+              className={"iconbtn" + (mode === m ? " on" : "")}
+              style={{ flex: 1, fontSize: 13 }}
+              onClick={() => { applyMode(m); setMode(m); }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>
+          Same matchday-programme design either way — paper for daylight, lights out for the 1:30 AM kickoffs.
         </p>
       </div>
 

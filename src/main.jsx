@@ -11,6 +11,7 @@ import "@fontsource/saira-condensed/800.css";
 import "./styles/global.css";
 
 import App from "./App.jsx";
+import { getMode, applyMode } from "./lib/theme.js";
 import HomePage from "./pages/HomePage.jsx";
 import MatchesPage from "./pages/MatchesPage.jsx";
 
@@ -45,6 +46,9 @@ async function requestPersistentStorage() {
   } catch { /* unsupported or blocked — nothing we can do */ }
 }
 requestPersistentStorage();
+
+/* Apply the saved appearance mode before first paint. */
+applyMode(getMode());
 
 /* autoUpdate: a new deploy installs, skips waiting and reloads the page on its
    own, so a plain refresh always lands on the latest build. We also re-check
