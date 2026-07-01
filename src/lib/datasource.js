@@ -527,16 +527,19 @@ export async function fetchLeagueAssists(espnSlug) {
 }
 
 /* Clubs in a league. API-Football is preferred (its team ids unlock squads,
-   transfers and player stats); ESPN is the fallback. */
+   transfers and player stats); ESPN is the fallback. Each club is tagged with
+   its id's source: ESPN and API-Football share a numeric id space, so an ESPN
+   id sent to an API-Football endpoint would silently fetch a DIFFERENT club —
+   callers must gate APIF-only features on src === "apif". */
 export async function fetchLeagueClubs(espnSlug) {
   const al = apifLeagueFor(espnSlug);
   if (al) {
     try {
       const clubs = await apif.fetchTeams(al.id, al.season);
-      if (clubs.length) return clubs;
+      if (clubs.length) return clubs.map((c) => ({ ...c, src: "apif" }));
     } catch { /* fall back to ESPN */ }
   }
-  return espn.fetchTeams(espnSlug);
+  return (await espn.fetchTeams(espnSlug)).map((c) => ({ ...c, src: "espn" }));
 }
 
 /* Current squad for a club, by API-Football team id. */
@@ -557,11 +560,13 @@ export function isCurrentWindowMove(dateStr, sinceIso) {
 /* League-wide transfer feed. API-Football's /transfers is per-team only, so a
    whole-league feed would need one call PER CLUB (~20 per league) — which blows
    through the request quota almost immediately. So the structured league feed
-   uses ESPN's single league-transactions endpoint instead. The AI "Confirmed
+   uses ESPN's single league-transactions endpoint instead, filtered to the
+   current window so last season's deals can't reappear. The AI "Confirmed
    moves" card (Gemini search) carries the live breadth; per-club pages can still
    pull richer API-Football detail on demand. */
-export async function fetchLeagueTransfers(espnSlug) {
-  return espn.fetchTransactions(espnSlug);
+export async function fetchLeagueTransfers(espnSlug, { sinceIso } = {}) {
+  const moves = await espn.fetchTransactions(espnSlug);
+  return moves.filter((m) => isCurrentWindowMove(m.date, sinceIso));
 }
 
 /* A club's transfers for the current window, mapped to the move shape the club

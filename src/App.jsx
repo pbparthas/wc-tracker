@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import BottomTabs from "./components/BottomTabs.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useOnlineStatus } from "./hooks/useOnlineStatus.js";
 
 export default function App() {
@@ -22,15 +23,17 @@ export default function App() {
         </div>
         {!online && <div className="banner">Offline — showing the last saved data</div>}
       </header>
-      <Suspense
-        fallback={
-          <div className="wrap" style={{ paddingTop: 24 }}>
-            <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading…</p>
-          </div>
-        }
-      >
-        <Outlet />
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense
+          fallback={
+            <div className="wrap" style={{ paddingTop: 24 }}>
+              <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading…</p>
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
+      </ErrorBoundary>
       {pathname !== "/" && <BottomTabs />}
     </div>
   );

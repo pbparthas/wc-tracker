@@ -74,7 +74,7 @@ export default function MatchesPage() {
 
   return (
     <>
-      <Hero matches={matches} />
+      <Hero matches={allMatches} />
       <div className="wrap" style={{ paddingTop: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8 }}>
           <span className="eyebrow">All times in IST 🇮🇳</span>

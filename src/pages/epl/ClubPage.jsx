@@ -38,15 +38,24 @@ export default function ClubPage() {
   const { comp, id } = useParams();
   const C = COMPETITIONS[comp] || COMPETITIONS.epl;
   const { data: clubs } = useCached(`clubs:${C.id}:af`, 7 * DAY, () => fetchLeagueClubs(C.slug));
-  const { data: moves } = useCached(`clubtransfers:${C.id}:` + id, 30 * 60 * 1000, () =>
-    fetchClubTransfers(C.slug, id, { sinceIso: C.window.opensIso })
+  const club = (clubs || []).find((c) => c.id === id);
+  // ESPN and API-Football ids collide numerically: an ESPN-sourced id must never
+  // hit API-Football endpoints or we'd show a different club's squad/transfers.
+  // Legacy caches lack src — those lists came from the APIF path, so treat
+  // missing src as apif.
+  const apifId = club ? club.src !== "espn" : false;
+  // apifId is part of the cache key: useCached captures its fetcher per key, so
+  // gating inside the fetcher alone would cache [] from before the clubs list
+  // loaded and never retry. A key flip re-runs the fetch with a fresh closure.
+  const { data: moves } = useCached(`clubtransfers:${C.id}:${id}:${apifId ? "a" : "n"}`, 30 * 60 * 1000, () =>
+    apifId ? fetchClubTransfers(C.slug, id, { sinceIso: C.window.opensIso }) : Promise.resolve([])
   );
   const { data: table } = useCached(`table:${C.id}`, DAY, () => fetchLeagueTable(C.slug));
-  const squad = useCached(`squad:${C.id}:` + id, DAY, () => fetchClubSquad(C.slug, id));
+  const squad = useCached(`squad:${C.id}:${id}:${apifId ? "a" : "n"}`, DAY, () =>
+    apifId ? fetchClubSquad(C.slug, id) : Promise.resolve([])
+  );
   const { favs, toggle } = useFavorites(C.id);
   const [picked, setPicked] = useState(null);
-
-  const club = (clubs || []).find((c) => c.id === id);
 
   const ins = (moves || []).filter((m) => m.toId === id || (club && m.to === club.name));
   const outs = (moves || []).filter((m) => m.fromId === id || (club && m.from === club.name));

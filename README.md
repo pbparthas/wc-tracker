@@ -10,15 +10,16 @@ knockout bracket, tournament squads with player profiles, stadium guides,
 kickoff weather, Golden Boot, calendar reminders — plus AI previews, recaps,
 digests and qualification scenarios powered by **your own free Gemini key**.
 
-**Costs $0 to run**: static hosting on GitHub Pages, ESPN's free public feed for data,
-no server, no accounts, no tracking. Each visitor's Gemini key lives only on their
+**Runs on a shoestring**: static hosting on GitHub Pages, live data from API-Football
+(via a tiny Cloudflare Worker proxy) with ESPN's public feed as automatic backup,
+no accounts, no tracking. Each visitor's Gemini key lives only on their
 own device.
 
 Full product spec (features, design system, security model): [`docs/SPEC.md`](docs/SPEC.md)
 
 > **Unofficial fan project** — not affiliated with or endorsed by FIFA, ESPN,
-> Google or any team. Data comes from ESPN's public feed; all trademarks belong
-> to their owners.
+> Google or any team. Data comes from API-Football and ESPN's public feed; all
+> trademarks belong to their owners.
 
 ## Develop
 

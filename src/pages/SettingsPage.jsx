@@ -210,7 +210,7 @@ export default function SettingsPage() {
       <div className="card" style={{ padding: 16, marginBottom: 20, fontSize: 12, color: "var(--muted)" }}>
         <div className="eyebrow" style={{ marginBottom: 8 }}>About</div>
         <p style={{ marginBottom: 10 }}>
-          Golazo · FIFA World Cup 2026 tracker. Live data from ESPN's public feed; stories by Gemini with
+          Golazo · FIFA World Cup 2026 tracker. Live data from API-Football (ESPN as backup); stories by Gemini with
           your own key. No accounts, no analytics, no tracking — everything stays on your device.
         </p>
         <p style={{ marginBottom: 12 }}>

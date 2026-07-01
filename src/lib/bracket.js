@@ -185,10 +185,14 @@ export function assembleBracket(liveMatches, standings) {
   });
 }
 
-// Tag a bound fixture with the skeleton match number of the slot it filled, so
-// the card can show "Match 73" to match the "Winner Match 73" feeder labels.
+// Tag a bound fixture with the skeleton match number of the slot it filled (so
+// the card can show "Match 73" to match the "Winner Match 73" feeder labels)
+// and normalise its round label from the slot — feeds mislabel rounds (ESPN
+// tags the 48-team first KO round "Round of 16"), the skeleton never does.
 function withMatchNo(fixture, slot) {
-  return fixture ? { ...fixture, matchNo: slot.no } : null;
+  return fixture
+    ? { ...fixture, matchNo: slot.no, stage: ROUND_LABEL[slot.round] || fixture.stage }
+    : null;
 }
 
 /* The full match list for the Matches tab: group fixtures from the feed, plus
