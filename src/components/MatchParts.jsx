@@ -777,6 +777,8 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam, match }) {
       {isLive && (
         <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 8 }}>
           Live estimate from the score &amp; time left — shifts as the game goes.
+          {minute >= 85 && match.hg === match.ag && /round|quarter|semi|final/i.test(match.stage || "") &&
+            " Level in a knockout: “draw” here means extra time and possibly penalties."}
         </div>
       )}
 

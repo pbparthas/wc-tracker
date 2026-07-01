@@ -212,6 +212,12 @@ async function findEspnId(fixture) {
   }
 }
 
+/* Lineups are fixed once published — substitutions come from the events feed —
+   so during the 60s live poll there's no reason to refetch them. Memoised per
+   fixture for the session; pre-match polls still refetch (that's how the
+   starting XI appears when it drops ~an hour before kickoff). */
+const lineupsMemo = new Map();
+
 async function fetchApifSummary(fixtureId) {
   try {
     // Fetch the fixture first so we know its state. For a match that hasn't
@@ -222,12 +228,14 @@ async function fetchApifSummary(fixtureId) {
     const state = mapState(fixture.status);
     const isPre = state === "pre";
 
+    const memoisedLineups = !isPre ? lineupsMemo.get(fixtureId) : null;
     const [lineups, events, stats, playerStats] = await Promise.all([
-      apif.fetchLineups(fixtureId).catch(() => []),
+      memoisedLineups || apif.fetchLineups(fixtureId).catch(() => []),
       isPre ? [] : apif.fetchFixtureEvents(fixtureId).catch(() => []),
       isPre ? [] : apif.fetchFixtureStats(fixtureId).catch(() => []),
       isPre ? [] : apif.fetchPlayerStats(fixtureId).catch(() => []),
     ]);
+    if (!isPre && !memoisedLineups && lineups.length >= 2) lineupsMemo.set(fixtureId, lineups);
 
     // Pull the matching ESPN summary in the background. API-Football can lag on
     // live timeline/stats (a 0-0 mid-match often has neither yet), so we use

@@ -18,8 +18,11 @@ export function useSchedule() {
     setLoading(false);
   }, []);
 
+  // Mount is TTL-governed (60s during live play), NOT forced: six pages share
+  // this hook, so tab-hopping would otherwise fire a redundant season fetch per
+  // navigation. Force stays on the manual ↻ button and on app resume.
   useEffect(() => {
-    refresh(true);
+    refresh();
   }, [refresh]);
 
   const anyLive = data.matches.some((m) => m.state === "in");
