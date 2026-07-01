@@ -1,24 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { throttle } from "./apifootball.js";
 
-describe("throttle — serial API-Football queue", () => {
-  it("runs queued tasks one at a time (no overlap)", async () => {
+describe("throttle — rate-guarded API-Football queue", () => {
+  it("never lets more than the cap run at once, and completes all", async () => {
     let active = 0;
     let maxActive = 0;
-    const order = [];
+    // Tasks longer than the start-gap so several genuinely overlap (as real
+    // network calls do), letting us observe the concurrency cap.
     const task = (n) => () =>
       new Promise((resolve) => {
         active++;
         maxActive = Math.max(maxActive, active);
-        setTimeout(() => {
-          order.push(n);
-          active--;
-          resolve(n);
-        }, 8);
+        setTimeout(() => { active--; resolve(n); }, 200);
       });
-    await Promise.all([throttle(task(1)), throttle(task(2)), throttle(task(3))]);
-    expect(maxActive).toBe(1); // never two in flight at once
-    expect(order).toEqual([1, 2, 3]); // and in submission order
+    const out = await Promise.all(Array.from({ length: 12 }, (_, i) => throttle(task(i))));
+    expect(out).toHaveLength(12); // all ran
+    expect(maxActive).toBeGreaterThan(1); // not strictly serial — live data isn't starved
+    expect(maxActive).toBeLessThanOrEqual(4); // but never a spike
   });
 
   it("keeps the queue alive after a rejection", async () => {
