@@ -8,7 +8,7 @@ import { useFavorites } from "../../hooks/useFavorites.js";
 import { useResume } from "../../hooks/useResume.js";
 import { istParts, IST } from "../../lib/time.js";
 
-export default function EplMatchesPage() {
+export default function LeagueMatchesPage() {
   const { comp } = useParams();
   const C = COMPETITIONS[comp] || COMPETITIONS.epl;
   const { data: matches, loading, error, refresh } = useCached(

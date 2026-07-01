@@ -24,12 +24,12 @@ const TeamsPage = React.lazy(() => import("./pages/TeamsPage.jsx"));
 const YourTeamsPage = React.lazy(() => import("./pages/YourTeamsPage.jsx"));
 const TeamPage = React.lazy(() => import("./pages/TeamPage.jsx"));
 const SettingsPage = React.lazy(() => import("./pages/SettingsPage.jsx"));
-const TransfersPage = React.lazy(() => import("./pages/epl/TransfersPage.jsx"));
-const EplMatchesPage = React.lazy(() => import("./pages/epl/EplMatchesPage.jsx"));
-const TablePage = React.lazy(() => import("./pages/epl/TablePage.jsx"));
-const ClubsPage = React.lazy(() => import("./pages/epl/ClubsPage.jsx"));
-const ClubPage = React.lazy(() => import("./pages/epl/ClubPage.jsx"));
-const EplMatchDetailPage = React.lazy(() => import("./pages/epl/EplMatchDetailPage.jsx"));
+const TransfersPage = React.lazy(() => import("./pages/league/TransfersPage.jsx"));
+const LeagueMatchesPage = React.lazy(() => import("./pages/league/LeagueMatchesPage.jsx"));
+const TablePage = React.lazy(() => import("./pages/league/TablePage.jsx"));
+const ClubsPage = React.lazy(() => import("./pages/league/ClubsPage.jsx"));
+const ClubPage = React.lazy(() => import("./pages/league/ClubPage.jsx"));
+const LeagueMatchDetailPage = React.lazy(() => import("./pages/league/LeagueMatchDetailPage.jsx"));
 
 /* Ask the browser to keep our storage. Without this, localStorage (where the
    Gemini key, favourites and cached data live) is "best-effort" and can be
@@ -84,11 +84,11 @@ const router = createHashRouter([
       { path: "team/:code", element: <TeamPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "league/:comp", element: <TransfersPage /> },
-      { path: "league/:comp/matches", element: <EplMatchesPage /> },
+      { path: "league/:comp/matches", element: <LeagueMatchesPage /> },
       { path: "league/:comp/table", element: <TablePage /> },
       { path: "league/:comp/clubs", element: <ClubsPage /> },
       { path: "league/:comp/club/:id", element: <ClubPage /> },
-      { path: "league/:comp/match/:id", element: <EplMatchDetailPage /> },
+      { path: "league/:comp/match/:id", element: <LeagueMatchDetailPage /> },
       /* Back-compat: old /epl links → the Premier League under the generic path. */
       { path: "epl", element: <Navigate to="/league/epl" replace /> },
       { path: "epl/*", element: <Navigate to="/league/epl" replace /> },

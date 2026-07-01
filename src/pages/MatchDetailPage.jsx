@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import Flag from "../components/Flag.jsx";
-import StatusPill from "../components/StatusPill.jsx";
 import AiCard from "../components/AiCard.jsx";
-import { EventSummary, PitchView, BenchList, CommentaryCard, StatsCard, TimelineCard, TopPerformers, MatchGlance, PredictionsCard, InjuriesCard } from "../components/MatchParts.jsx";
+import { TopPerformers, MatchGlance, PredictionsCard, InjuriesCard } from "../components/MatchParts.jsx";
+import { ScoreHeader, MatchTabsBar, TimelineTab, LineupsTab, StatsTab, InfoCard } from "../components/MatchDetailShared.jsx";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
 import { useMatchSummary } from "../hooks/useMatchSummary.js";
@@ -11,7 +10,6 @@ import { useAiContent } from "../hooks/useAiContent.js";
 import { useSwipeTabs } from "../hooks/useSwipeTabs.js";
 import { usePredictions } from "../hooks/usePredictions.js";
 import { useInjuries } from "../hooks/useInjuries.js";
-import { istParts } from "../lib/time.js";
 import { downloadIcs } from "../lib/ics.js";
 import { stadiumFor } from "../data/stadiums.js";
 import { useWeather } from "../hooks/useWeather.js";
@@ -19,27 +17,6 @@ import { mergeKnockoutSchedule } from "../lib/bracket.js";
 import { previewPrompt, recapPrompt, h2hPrompt } from "../lib/prompts.js";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
-
-/* Team column in the score header — links to the team page when we know the
-   team's code (resolved World Cup sides), and highlights the winner. */
-function TeamCol({ team, outcome }) {
-  const win = outcome === "win";
-  const lose = outcome === "lose";
-  const inner = (
-    <>
-      <Flag team={team} size={40} />
-      <div style={{
-        fontWeight: win ? 800 : 700, marginTop: 6,
-        color: win ? "var(--saffron)" : lose ? "var(--muted)" : undefined,
-      }}>
-        {team?.name}{win ? " ✓" : ""}
-      </div>
-    </>
-  );
-  return team?.code
-    ? <Link to={`/team/${team.code}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>{inner}</Link>
-    : <div>{inner}</div>;
-}
 
 export default function MatchDetailPage() {
   const { id } = useParams();
@@ -96,16 +73,7 @@ export default function MatchDetailPage() {
     );
   }
 
-  const p = istParts(match.kickoff);
-  const live = match.state === "in";
-  // Highlight the winner in the score header (penalties break a level tie).
-  const done = match.state === "post";
-  const pens = match.phg != null && match.pag != null;
-  const winnerSide = done
-    ? (match.hg > match.ag ? "home" : match.ag > match.hg ? "away"
-      : pens ? (match.phg > match.pag ? "home" : match.pag > match.phg ? "away" : null) : null)
-    : null;
-  const outcomeOf = (side) => (winnerSide ? (winnerSide === side ? "win" : "lose") : null);
+  const eyebrow = `${stageLabel}${koMatchNo ? " · Match " + koMatchNo : ""}${match.city ? " · " + match.city : ""}`;
 
   // minHeight on the wrap keeps the whole screen swipeable even when a tab's
   // content is short (e.g. "Timeline not available yet."), so the tab-swipe
@@ -114,42 +82,7 @@ export default function MatchDetailPage() {
     <div className="wrap" style={{ paddingTop: 14, minHeight: "85vh" }} {...swipe}>
       <Link to="/matches" style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
 
-      <div className="card" style={{ padding: 16, margin: "10px 0", borderColor: live ? "var(--live)" : undefined }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-          <span className="eyebrow">{stageLabel}{koMatchNo ? " · Match " + koMatchNo : ""}{match.city ? " · " + match.city : ""}</span>
-          <StatusPill status={match.status} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8, textAlign: "center" }}>
-          <TeamCol team={match.home} outcome={outcomeOf("home")} />
-          <div>
-            <div className={"disp" + (live ? " pulse" : "")} style={{
-              fontSize: live ? 48 : upcoming ? 22 : 38,
-              fontWeight: 800,
-              color: live ? "var(--live)" : upcoming ? "var(--saffron)" : "var(--chalk)",
-              lineHeight: 1.1,
-            }}>
-              {upcoming ? (p ? p.time : "TBC") : `${match.hg ?? "–"} : ${match.ag ?? "–"}`}
-            </div>
-            {live && (
-              <div className="disp" style={{ fontSize: 16, fontWeight: 700, color: "var(--live)", marginTop: 4, letterSpacing: "0.08em" }}>
-                {match.status}
-              </div>
-            )}
-            {match.phg != null && match.pag != null && (
-              <div className="disp" style={{ fontSize: 13, fontWeight: 700, color: "var(--saffron)", marginTop: 2 }}>
-                {match.phg}–{match.pag} on pens
-              </div>
-            )}
-          </div>
-          <TeamCol team={match.away} outcome={outcomeOf("away")} />
-        </div>
-
-        <EventSummary events={summary?.events} match={match} />
-
-        <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "var(--muted)" }}>
-          {p ? `${p.day} · ${p.time}` : ""} <span style={{ color: "var(--saffron)", fontWeight: 600 }}>IST</span>
-          {match.venue ? ` · ${match.venue}` : ""}
-        </div>
+      <ScoreHeader match={match} eyebrow={eyebrow} events={summary?.events} teamHref={(t) => (t?.code ? `/team/${t.code}` : null)}>
         {wx && (
           <div style={{ textAlign: "center", marginTop: 6, fontSize: 12, color: "var(--muted)" }}>
             {wx.emoji} {wx.label} · {wx.tempC}°C
@@ -161,23 +94,15 @@ export default function MatchDetailPage() {
             <button className="btn" onClick={() => downloadIcs(match)}>🔔 Add reminder to calendar</button>
           </div>
         )}
-      </div>
+      </ScoreHeader>
 
-      {tabs.length > 1 && (
-        <div className="match-tabs">
-          {tabs.map((t) => (
-            <button key={t.id} className={"match-tab" + (activeTab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <MatchTabsBar tabs={tabs} active={activeTab} onTab={setTab} />
 
       {activeTab === "overview" && (
         <>
           {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
           {showPredictions && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} match={match} />}
-          {(upcoming || match.state === "in") && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} homeId={match.apifHomeId} awayId={match.apifAwayId} />}
+          {showPredictions && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} homeId={match.apifHomeId} awayId={match.apifAwayId} />}
           {match.state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
           {!upcoming && <MatchGlance stats={summary?.stats} />}
@@ -207,56 +132,13 @@ export default function MatchDetailPage() {
             );
           })()}
 
-          {summary?.info && (summary.info.attendance || summary.info.referee) && (
-            <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
-              {summary.info.attendance ? <div>Attendance: {Number(summary.info.attendance).toLocaleString("en-IN")}</div> : null}
-              {summary.info.referee ? <div>Referee: {summary.info.referee}</div> : null}
-            </div>
-          )}
-
+          <InfoCard info={summary?.info} />
         </>
       )}
 
-      {activeTab === "timeline" && (
-        sLoad && !summary?.events ? (
-          <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading timeline…</p>
-        ) : summary?.events?.length ? (
-          <>
-            <TimelineCard events={summary.events} />
-            {summary?.commentary?.length > 0 && <CommentaryCard items={summary.commentary} />}
-          </>
-        ) : (
-          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Timeline not available yet.</p>
-        )
-      )}
-
-      {activeTab === "lineups" && (
-        sLoad && !summary?.lineups ? (
-          <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading lineups…</p>
-        ) : summary?.lineups ? (
-          <>
-            <PitchView home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} match={match} />
-            <BenchList home={summary.lineups.home} away={summary.lineups.away} events={summary?.events} playerStats={summary?.playerStats} />
-          </>
-        ) : upcoming ? (
-          <div className="card" style={{ padding: "12px 14px", marginBottom: 10, fontSize: 13, color: "var(--muted)" }}>
-            <div className="eyebrow" style={{ marginBottom: 4 }}>Starting XI</div>
-            Team sheets usually drop about an hour before kickoff — they'll appear here automatically.
-          </div>
-        ) : (
-          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Lineups not available for this match.</p>
-        )
-      )}
-
-      {activeTab === "stats" && (
-        sLoad && !summary?.stats ? (
-          <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading stats…</p>
-        ) : summary?.stats?.length ? (
-          <StatsCard stats={summary.stats} />
-        ) : (
-          <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Match stats not available yet.</p>
-        )
-      )}
+      {activeTab === "timeline" && <TimelineTab loading={sLoad} summary={summary} />}
+      {activeTab === "lineups" && <LineupsTab loading={sLoad} summary={summary} upcoming={upcoming} match={match} />}
+      {activeTab === "stats" && <StatsTab loading={sLoad} summary={summary} />}
 
       {sLoad && !summary && activeTab === "overview" && (
         <p className="pulse" style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>Loading match details…</p>
