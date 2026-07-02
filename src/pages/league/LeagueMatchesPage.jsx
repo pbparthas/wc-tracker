@@ -33,6 +33,25 @@ function DayGroups({ groups, isFav, linkBase }) {
   ));
 }
 
+/* "Regular Season - 5" / "League Stage - 5" → "Matchday 5"; knockout labels
+   pass through as-is. */
+function roundLabel(stage) {
+  const m = /-\s*(\d+)\s*$/.exec(stage || "");
+  if (m && /season|stage/i.test(stage)) return `Matchday ${m[1]}`;
+  return stage || "Fixtures";
+}
+
+/* Group a (kickoff-sorted) list into matchday rounds, preserving order. */
+function groupByRound(list) {
+  const rounds = new Map();
+  for (const m of list) {
+    const key = roundLabel(m.stage);
+    if (!rounds.has(key)) rounds.set(key, []);
+    rounds.get(key).push(m);
+  }
+  return [...rounds.entries()].map(([label, matches]) => ({ label, matches }));
+}
+
 /* Collapsed-by-default section — a full club season is ~380 fixtures, so only
    the near-term window renders expanded; history and the far future fold away. */
 function Collapsible({ label, count, children, defaultOpen = false }) {
@@ -66,7 +85,7 @@ export default function LeagueMatchesPage() {
 
   const anyLive = (matches || []).some((m) => m.state === "in");
 
-  const { live, todayG, soonG, laterG, laterCount, resultsG, resultsCount } = useMemo(() => {
+  const { live, todayG, soonG, laterRounds, laterCount, resultRounds, resultsCount } = useMemo(() => {
     const list = matches || [];
     const today = istDateKey();
     const weekOut = istDateKey(new Date(Date.now() + 7 * DAY));
@@ -77,13 +96,15 @@ export default function LeagueMatchesPage() {
     const todayList = pre.filter((m) => dayOf(m) === today);
     const soon = pre.filter((m) => dayOf(m) > today && dayOf(m) <= weekOut);
     const later = pre.filter((m) => dayOf(m) > weekOut);
+    const byKickoff = (a, b) => new Date(a.kickoff) - new Date(b.kickoff);
     return {
       live,
       todayG: groupByDay(todayList),
       soonG: groupByDay(soon),
-      laterG: groupByDay(later),
+      laterRounds: groupByRound([...later].sort(byKickoff)),
       laterCount: later.length,
-      resultsG: groupByDay([...done].reverse()), // newest results first
+      // newest matchday first, newest result first within it
+      resultRounds: groupByRound([...done].sort(byKickoff).reverse()),
       resultsCount: done.length,
     };
   }, [matches]);
@@ -158,13 +179,27 @@ export default function LeagueMatchesPage() {
         </>
       )}
 
-      <Collapsible label="LATER FIXTURES" count={laterCount}>
-        <DayGroups groups={laterG} isFav={isFav} linkBase={linkBase} />
-      </Collapsible>
+      {laterCount > 0 && (
+        <>
+          <h2 className="disp section-h">LATER FIXTURES</h2>
+          {laterRounds.map((r) => (
+            <Collapsible key={r.label} label={r.label.toUpperCase()} count={r.matches.length}>
+              <DayGroups groups={groupByDay(r.matches)} isFav={isFav} linkBase={linkBase} />
+            </Collapsible>
+          ))}
+        </>
+      )}
 
-      <Collapsible label="RESULTS" count={resultsCount}>
-        <DayGroups groups={resultsG} isFav={isFav} linkBase={linkBase} />
-      </Collapsible>
+      {resultsCount > 0 && (
+        <>
+          <h2 className="disp section-h" style={{ color: "var(--muted)" }}>RESULTS</h2>
+          {resultRounds.map((r) => (
+            <Collapsible key={r.label} label={r.label.toUpperCase()} count={r.matches.length}>
+              <DayGroups groups={groupByDay(r.matches)} isFav={isFav} linkBase={linkBase} />
+            </Collapsible>
+          ))}
+        </>
+      )}
 
       {matches?.length > 0 && (
         <p style={{ fontSize: 11, color: "var(--muted)", margin: "10px 0 20px" }}>

@@ -480,6 +480,7 @@ const LEAGUE_FIXTURES_TTL = 5 * 60 * 1000;
 export async function fetchLeagueMatches(espnSlug, opts = {}) {
   const al = apifLeagueFor(espnSlug);
   if (!al) return espn.fetchLeagueMatches(espnSlug, opts);
+  const snapKey = `apif:league:${al.id}:${al.season}`;
   try {
     const now = Date.now();
     const cacheKey = `${al.id}:${al.season}`;
@@ -494,8 +495,15 @@ export async function fetchLeagueMatches(espnSlug, opts = {}) {
     const matches = fixtures.map(fixtureToMatch);
     leagueFixturesCache[cacheKey] = matches;
     leagueFixturesFetchedAt[cacheKey] = now;
+    if (matches.length) cacheSet(snapKey, matches, 7 * 24 * 60 * 60 * 1000);
     return matches;
   } catch {
+    // One API-Football blip must not swap the full season for ESPN's
+    // scoreboard (it only lists near-term events, so a 380-fixture list
+    // silently became a single match). Serve the last good API-Football
+    // snapshot; ESPN only when we've never had one.
+    const snap = cacheGet(snapKey);
+    if (snap?.length) return snap;
     return espn.fetchLeagueMatches(espnSlug, opts);
   }
 }
