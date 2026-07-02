@@ -111,8 +111,12 @@ function fixtureToMatch(f) {
 
 let allFixturesCache = null;
 let allFixturesFetchedAt = 0;
+let allFixturesFullAt = 0;
 let allFixturesInflight = null;
 const ALL_FIXTURES_TTL = 60 * 1000;
+// How long a full season list stays good enough to only overlay live fixtures
+// onto, before the next poll re-downloads everything for reconciliation.
+const FULL_REFRESH_MS = 10 * 60 * 1000;
 const ALL_FIXTURES_KEY = "apif:wc:fixtures";
 
 async function getAllFixtures(bust) {
@@ -122,19 +126,40 @@ async function getAllFixtures(bust) {
   }
   // schedule.js fans out 6 chunk fetches at once; without this guard each one
   // fires its own full-season request — six identical calls that burn the
-  // 100-req/day free tier and, when some 429, leave chunks reading from
-  // different sources so the match count flickers between refreshes. Share one
-  // in-flight request across all concurrent callers instead.
+  // request budget and, when some 429, leave chunks reading from different
+  // sources so the match count flickers between refreshes. Share one in-flight
+  // request across all concurrent callers instead.
   if (allFixturesInflight) return allFixturesInflight;
-  allFixturesInflight = apif
-    .fetchFixtures(apif.LEAGUES.worldcup, { season: 2026 })
-    .then((fixtures) => {
-      allFixturesCache = fixtures;
-      allFixturesFetchedAt = Date.now();
-      cacheSet(ALL_FIXTURES_KEY, fixtures, 7 * 24 * 60 * 60 * 1000);
-      return fixtures;
-    })
-    .finally(() => { allFixturesInflight = null; });
+  allFixturesInflight = (async () => {
+    // Live-overlay poll: with a recent full season list in hand, the 60s live
+    // poll only needs the in-play fixtures (live=all — a few KB) overlaid by
+    // id. Re-downloading the whole season every minute is what froze live
+    // cards: on a slow link the big request times out, the catch serves the
+    // stale snapshot, and the match minute sticks (13' at the 41st minute).
+    // The full list still re-downloads every FULL_REFRESH_MS, and immediately
+    // when a live fixture vanishes from live=all (it just finished — its
+    // final score only exists in the full feed).
+    if (allFixturesCache && now - allFixturesFullAt < FULL_REFRESH_MS) {
+      const live = await apif.fetchFixtures(apif.LEAGUES.worldcup, { live: true });
+      const liveIds = new Set(live.map((f) => f.id));
+      const justFinished = allFixturesCache.some(
+        (f) => mapState(f.status) === "in" && !liveIds.has(f.id)
+      );
+      if (!justFinished) {
+        const byId = new Map(live.map((f) => [f.id, f]));
+        allFixturesCache = allFixturesCache.map((f) => byId.get(f.id) || f);
+        allFixturesFetchedAt = Date.now();
+        cacheSet(ALL_FIXTURES_KEY, allFixturesCache, 7 * 24 * 60 * 60 * 1000);
+        return allFixturesCache;
+      }
+    }
+    const fixtures = await apif.fetchFixtures(apif.LEAGUES.worldcup, { season: 2026 });
+    allFixturesCache = fixtures;
+    allFixturesFetchedAt = Date.now();
+    allFixturesFullAt = Date.now();
+    cacheSet(ALL_FIXTURES_KEY, fixtures, 7 * 24 * 60 * 60 * 1000);
+    return fixtures;
+  })().finally(() => { allFixturesInflight = null; });
   return allFixturesInflight;
 }
 
@@ -426,6 +451,10 @@ async function fetchApifSummary(fixtureId) {
     if (espnSummary) {
       if (!out.events?.length && espnSummary.events?.length) out.events = espnSummary.events;
       if (!out.stats?.length && espnSummary.stats?.length) out.stats = espnSummary.stats;
+      // Lineups too: API-Football's lineups call can fail or lag on a live
+      // match (a user sat on "no lineups yet" at the 41st minute) — ESPN
+      // publishes the same starting XIs.
+      if (!out.lineups && espnSummary.lineups) out.lineups = espnSummary.lineups;
       out.commentary = espnSummary.commentary || null;
     }
 
