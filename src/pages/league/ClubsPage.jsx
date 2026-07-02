@@ -16,7 +16,7 @@ export default function ClubsPage() {
 
   return (
     <div className="wrap" style={{ paddingTop: 16 }}>
-      <h2 className="disp" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>20 CLUBS</h2>
+      <h2 className="disp" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>{clubs?.length || ""} CLUBS</h2>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 12 }}>
         Tap a club for its squad, window business and an AI profile. ★ marks your clubs.
       </p>

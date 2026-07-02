@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { windowOpen } from "../data/competitions.js";
+import { COMPETITIONS, windowOpen } from "../data/competitions.js";
 
 const WC_TABS = [
   ["/", "⌂ HOME"],
@@ -13,6 +13,10 @@ const WC_TABS = [
 /* Transfers lead while the window is open; matches take over for the season. */
 const leagueTabs = (comp) => {
   const base = `/league/${comp}`;
+  // Cups have no transfer window at all — Matches is the landing tab.
+  if (COMPETITIONS[comp]?.kind === "cup") {
+    return [["/", "⌂"], [`${base}/matches`, "MATCHES"], [`${base}/table`, "TABLE"], [`${base}/clubs`, "CLUBS"]];
+  }
   const order = windowOpen(comp)
     ? [[base, "TRANSFERS"], [`${base}/matches`, "MATCHES"]]
     : [[`${base}/matches`, "MATCHES"], [base, "TRANSFERS"]];

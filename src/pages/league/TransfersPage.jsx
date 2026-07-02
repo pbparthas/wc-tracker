@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import AiCard from "../../components/AiCard.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchLeagueClubs, fetchLeagueTransfers } from "../../lib/datasource.js";
@@ -62,6 +62,8 @@ function WindowBar({ window: win }) {
 export default function TransfersPage() {
   const { comp } = useParams();
   const C = COMPETITIONS[comp] || COMPETITIONS.epl;
+  // Cups have no transfer window — their landing page is the fixtures list.
+  if (C.kind === "cup") return <Navigate to={`/league/${C.id}/matches`} replace />;
   const { data: moves, loading, error, refresh } = useCached(`transfers:${C.id}:af`, 30 * 60 * 1000, () =>
     fetchLeagueTransfers(C.slug, { sinceIso: C.window.opensIso })
   );

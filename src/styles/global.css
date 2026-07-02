@@ -43,6 +43,9 @@
 :root[data-mode="dark"] [data-comp="bundesliga"] { --saffron: #e05252; }
 :root[data-mode="dark"] [data-comp="seriea"] { --saffron: #5b9bd9; }
 :root[data-mode="dark"] [data-comp="ligue1"] { --saffron: #2fb9a4; }
+:root[data-mode="dark"] [data-comp="championship"] { --saffron: #e0708f; }
+:root[data-mode="dark"] [data-comp="ucl"] { --saffron: #8b9bf0; }
+:root[data-mode="dark"] [data-comp="uel"] { --saffron: #e8a04a; }
 
 /* Per-competition identity: same paper chassis, a different accent per league —
    deep print-ink shades that hold contrast on the beige. */
@@ -51,6 +54,9 @@
 [data-comp="bundesliga"] { --saffron: #b02525; }
 [data-comp="seriea"] { --saffron: #1f5fa8; }
 [data-comp="ligue1"] { --saffron: #0c7a68; }
+[data-comp="championship"] { --saffron: #8a1538; }
+[data-comp="ucl"] { --saffron: #2a3a8c; }
+[data-comp="uel"] { --saffron: #b8681a; }
 
 .zdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: baseline; }
 

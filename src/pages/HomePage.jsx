@@ -12,11 +12,11 @@ import { useAiContent } from "../hooks/useAiContent.js";
 import { tournamentRecapPrompt } from "../lib/prompts.js";
 
 /* Club leagues that are live in the app (transfers + table + clubs + matches). */
-const CLUB_LEAGUES = ["epl", "laliga", "bundesliga", "seriea", "ligue1"];
+const CLUB_LEAGUES = ["epl", "championship", "laliga", "bundesliga", "seriea", "ligue1", "ucl", "uel"];
 const LEAGUE_ACCENTS = {
-  epl: "#0b7a45", laliga: "#c2571d", bundesliga: "#b02525", seriea: "#1f5fa8", ligue1: "#0c7a68",
+  epl: "#0b7a45", championship: "#8a1538", laliga: "#c2571d", bundesliga: "#b02525",
+  seriea: "#1f5fa8", ligue1: "#0c7a68", ucl: "#2a3a8c", uel: "#b8681a",
 };
-const COMING_SOON = [["⭐", "Champions League"]];
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -186,14 +186,15 @@ export default function HomePage() {
           const c = COMPETITIONS[id];
           if (!c) return null;
           const open = !!c.window?.closesIso && Date.now() < new Date(c.window.closesIso).getTime();
+          const target = c.kind === "cup" ? `/league/${id}/matches` : `/league/${id}`;
           return (
             <div
               key={id}
               className="card"
               role="link"
               tabIndex={0}
-              onClick={() => navigate(`/league/${id}`)}
-              onKeyDown={(e) => e.key === "Enter" && navigate(`/league/${id}`)}
+              onClick={() => navigate(target)}
+              onKeyDown={(e) => e.key === "Enter" && navigate(target)}
               style={{ padding: 12, cursor: "pointer", borderLeft: `3px solid ${LEAGUE_ACCENTS[id]}` }}
             >
               <span className="eyebrow">{c.season.label}</span>
@@ -208,13 +209,7 @@ export default function HomePage() {
             </div>
           );
         })}
-        {COMING_SOON.map(([flag, name]) => (
-          <div key={name} className="card" style={{ padding: 12, opacity: 0.55 }}>
-            <span className="eyebrow">Europe</span>
-            <div className="disp" style={{ fontSize: 16, fontWeight: 800, marginTop: 2 }}>{flag} {name.toUpperCase()}</div>
-            <div className="eyebrow" style={{ marginTop: 5, letterSpacing: "0.08em" }}>Coming soon</div>
-          </div>
-        ))}
+
       </div>
 
       {phase === "archive" && (

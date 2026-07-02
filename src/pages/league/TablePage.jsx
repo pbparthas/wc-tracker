@@ -7,14 +7,15 @@ import { useCached } from "../../hooks/useCached.js";
 
 const HALF_HOUR = 30 * 60 * 1000;
 
-/* Zone colors: CL / EL / Conference / relegation. The fifth CL spot is
-   coefficient-dependent — footnoted as approximate. */
-function zoneOf(pos, z) {
-  if (pos <= z.ucl) return ["var(--saffron)", "Champions League"];
-  if (pos <= z.uel) return ["var(--gold)", "Europa League"];
-  if (pos <= z.conf) return ["#7FB5FF", "Conference League"];
-  if (pos > z.releg) return ["var(--live)", "Relegation"];
-  return [null, null];
+/* Coloured table bands come from the competition config, so a domestic league
+   (Europe/relegation), the Championship (promotion/play-offs) and a UEFA
+   league phase (last 16 / play-off / out) each read correctly. */
+function zoneOf(pos, bands) {
+  for (const b of bands || []) {
+    if (b.upTo != null && pos <= b.upTo) return b;
+    if (b.from != null && pos >= b.from) return b;
+  }
+  return null;
 }
 
 /* Last-5 form (most recent last), as small W/D/L pips. API-Football ships this
@@ -98,7 +99,7 @@ export default function TablePage() {
             </thead>
             <tbody>
               {data.rows.map((r, i) => {
-                const [color] = zoneOf(i + 1, C.zones);
+                const color = zoneOf(i + 1, C.zones)?.color;
                 return (
                   <tr key={r.team.espnId || r.team.name}>
                     <td style={{ color: "var(--muted)" }}>
@@ -125,11 +126,13 @@ export default function TablePage() {
 
       {data && (
         <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 20 }}>
-          <span className="zdot" style={{ background: "var(--saffron)" }} /> Champions League ·{" "}
-          <span className="zdot" style={{ background: "var(--gold)" }} /> Europa ·{" "}
-          <span className="zdot" style={{ background: "#7FB5FF" }} /> Conference ·{" "}
-          <span className="zdot" style={{ background: "var(--live)" }} /> Relegation · European spots are approximate
-          (the extra CL place depends on UEFA coefficients).
+          {(C.zones || []).map((b, i) => (
+            <span key={b.label}>
+              {i > 0 ? " · " : ""}
+              <span className="zdot" style={{ background: b.color }} /> {b.label}
+            </span>
+          ))}
+          {(C.zones || []).some((b) => /Champions|Europa|Conference/.test(b.label)) && " · European spots are approximate (they shift with UEFA coefficients and cup winners)."}
         </p>
       )}
       </>)}
