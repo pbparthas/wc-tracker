@@ -223,8 +223,10 @@ async function findEspnId(fixture) {
    starting XI appears when it drops ~an hour before kickoff). */
 const lineupsMemo = new Map();
 
+/* NOTE: no catch-all ESPN fallback here on purpose — espn.fetchSummary(id)
+   with an API-Football id could return a DIFFERENT match (the id spaces
+   collide). Errors propagate; useMatchSummary keeps the previous summary. */
 async function fetchApifSummary(fixtureId) {
-  try {
     // Fetch the fixture first so we know its state. For a match that hasn't
     // kicked off, the timeline / stats / player-stats / commentary endpoints
     // return nothing — firing them anyway just saturates the request burst and
@@ -408,12 +410,6 @@ async function fetchApifSummary(fixtureId) {
     }
 
     return out;
-  } catch (e) {
-    // Do NOT fall back to espn.fetchSummary(fixtureId): that's an API-Football
-    // id, and ESPN's id space collides — it could return a different match.
-    // Rethrow; useMatchSummary keeps the previous good summary on error.
-    throw e;
-  }
 }
 
 /* ── Predictions (API-Football only) ─────────────────────────────── */

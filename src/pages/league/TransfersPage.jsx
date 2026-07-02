@@ -62,10 +62,9 @@ function WindowBar({ window: win }) {
 export default function TransfersPage() {
   const { comp } = useParams();
   const C = COMPETITIONS[comp] || COMPETITIONS.epl;
-  // Cups have no transfer window — their landing page is the fixtures list.
-  if (C.kind === "cup") return <Navigate to={`/league/${C.id}/matches`} replace />;
+  const isCup = C.kind === "cup";
   const { data: moves, loading, error, refresh } = useCached(`transfers:${C.id}:af`, 30 * 60 * 1000, () =>
-    fetchLeagueTransfers(C.slug, { sinceIso: C.window.opensIso })
+    isCup ? Promise.resolve([]) : fetchLeagueTransfers(C.slug, { sinceIso: C.window?.opensIso })
   );
   const { data: clubs } = useCached(`clubs:${C.id}:af`, 7 * 24 * HOUR, () => fetchLeagueClubs(C.slug));
   const { favs } = useFavorites(C.id);
@@ -93,6 +92,10 @@ export default function TransfersPage() {
     () => confirmedMovesPrompt(C.name),
     { ttlMs: 6 * HOUR, grounding: true }
   );
+
+  // Cups have no transfer window — their landing page is the fixtures list.
+  // (After the hooks: rules-of-hooks forbids an early return above them.)
+  if (isCup) return <Navigate to={`/league/${C.id}/matches`} replace />;
 
   const feedDown = !!error && !moves;
 
