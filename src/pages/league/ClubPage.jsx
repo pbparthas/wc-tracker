@@ -184,9 +184,21 @@ export default function ClubPage() {
   // API-Football's squads endpoint lags the transfer window by days — its own
   // transfers feed is fresher. Anyone confirmed as leaving this window is
   // dropped from the squad list rather than shown as a current player.
-  const norm = (n) => (n || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  const gone = new Set(outs.map((m) => norm(m.player)));
-  const squadPlayers = gone.size ? (squad.data || []).filter((p) => !gone.has(norm(p.name))) : squad.data;
+  // Name matching must survive the feed's two name styles ("A. Robertson" in
+  // squads vs "Andrew Robertson" in transfers): equal full names, or same
+  // surname plus matching first initial.
+  const nameParts = (n) =>
+    (n || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\./g, "").split(/\s+/).filter(Boolean);
+  const samePlayer = (a, b) => {
+    const pa = nameParts(a);
+    const pb = nameParts(b);
+    if (!pa.length || !pb.length) return false;
+    if (pa.join(" ") === pb.join(" ")) return true;
+    return pa[pa.length - 1] === pb[pb.length - 1] && pa[0][0] === pb[0][0];
+  };
+  const squadPlayers = outs.length
+    ? (squad.data || []).filter((p) => !outs.some((m) => samePlayer(p.name, m.player)))
+    : squad.data;
 
   const tableRow = table?.rows?.find(
     (r) => (r.team.apifId && String(r.team.apifId) === String(id)) || r.team.espnId === id || r.team.name === club?.name
@@ -304,9 +316,18 @@ export default function ClubPage() {
       )}
 
       {tab === "squad" && (
-        <div className="card" style={{ padding: "6px 14px 12px", marginBottom: 20 }}>
-          <SquadList players={squadPlayers} loading={squad.loading} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
-        </div>
+        <>
+          <div className="card" style={{ padding: "6px 14px 12px" }}>
+            <SquadList players={squadPlayers} loading={squad.loading} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
+          </div>
+          {(squadPlayers?.length ?? 0) > 0 && (
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 20px" }}>
+              Squad from the structured feed — confirmed departures this window are filtered out,
+              but brand-new deals can take a few days to register. A player's ✨ profile has the
+              latest word on any move.
+            </p>
+          )}
+        </>
       )}
 
       {tab === "injuries" && (
