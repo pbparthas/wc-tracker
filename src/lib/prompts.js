@@ -255,17 +255,19 @@ export function confirmedMovesPrompt(leagueName, clubNames = []) {
 
 export function clubPrompt(club, moves) {
   const lines = [
-    `Using Google Search where helpful, write a current profile of ${club.name} for the 2026 summer transfer window.`,
+    `Write a profile of ${club.name} for a football app's club page, using Google Search to verify facts. Cover, in this order, with **bold** mini-headings:`,
+    "1. **The club** — two sentences of history and identity (founded, ground, what they're known for).",
+    "2. **Honours** — their major trophies with counts (league titles, domestic cups, European cups). If unsure of an exact count, say 'around' rather than inventing precision.",
+    "3. **Last five seasons** — their league finishing position in each of the last five completed seasons, one compact line.",
+    "4. **Right now** — current manager, the squad's shape, and what this window means for them.",
   ];
   if (moves?.length) {
     lines.push("Their confirmed moves this window (authoritative):");
     for (const m of moves.slice(0, 12)) {
-      lines.push(`- ${m.player}: ${m.from || "free agent"} → ${m.to}${m.fee ? ` (${m.fee})` : ""}`);
+      lines.push(`- ${m.player}: ${m.from || "?"} → ${m.to || "?"}${m.fee ? ` (${m.fee})` : ""}`);
     }
   }
-  lines.push(
-    "Cover how last season went, what the squad still needs, what this window's business means, and the outlook for 2026-27."
-  );
+  lines.push("Keep it under 220 words total.");
   return lines.join("\n");
 }
 

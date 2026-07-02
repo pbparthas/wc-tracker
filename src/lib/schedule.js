@@ -39,6 +39,12 @@ function fatten(m) {
 
 function ttlFor(chunk, cached) {
   const now = Date.now();
+  // A chunk served by the ESPN fallback (numeric ids — API-Football fixtures
+  // all carry the af- prefix) must never freeze, or a blip during a fetch
+  // would pin that week on ESPN's data (wrong ids, mislabelled rounds)
+  // permanently. Keep retrying the primary source instead.
+  const fromFallback = cached.matches.some((m) => m.id != null && !String(m.id).startsWith("af-"));
+  if (fromFallback) return 15 * 60 * 1000;
   if (chunk.to.getTime() + DAY < now) {
     // Past chunk: if everything is final it never changes; otherwise ESPN may lag.
     const allFinal = cached.matches.length > 0 && cached.matches.every((m) => m.state === "post");

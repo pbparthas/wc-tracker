@@ -14,18 +14,38 @@ const ID_PREFIX = "af-";
    (numeric ids) that mix badly with API-Football data (af- ids) and destabilise
    the match count — wipe those caches once so every chunk re-fetches from the
    single source. */
-const SOURCE_VERSION = "apif-primary-v1";
+const SOURCE_VERSION = "apif-primary-v2";
 try {
   if (localStorage.getItem("golazo:sourceVersion") !== SOURCE_VERSION) {
-    clearPrefix("sched:");
-    clearPrefix("sum:");
-    clearPrefix("standings");
+    // v2 adds the league caches: an API-Football blip used to write ESPN
+    // fallback data (colliding numeric ids, no form/squads/transfers) into
+    // week-long caches, freezing club pages and fixture lists on the wrong
+    // source until the TTL ran out. Wipe once; useCached now caps how long
+    // any fallback payload may live.
+    for (const p of [
+      "sched:", "sum:", "standings",
+      "matches:", "table:", "scorers:", "assists:",
+      "clubs:", "clubtransfers:", "clubinjuries:", "squad:", "transfers:",
+    ]) clearPrefix(p);
     localStorage.setItem("golazo:sourceVersion", SOURCE_VERSION);
   }
 } catch { /* private mode — nothing to migrate */ }
 
 function isApifId(id) {
   return String(id).startsWith(ID_PREFIX);
+}
+
+/* True when a payload came from the ESPN fallback rather than API-Football.
+   Fallback data is a stopgap — it must never outlive the blip that produced
+   it, so useCached caps its cache TTL to minutes instead of days. Detection
+   is by the tags the fetchers attach (src/source) or, for match lists, by the
+   id space: every API-Football fixture id carries the "af-" prefix. */
+export function isFallbackData(d) {
+  if (!d || typeof d !== "object") return false;
+  if (d.src === "espn" || d.source === "espn") return true;
+  const list = Array.isArray(d) ? d : Array.isArray(d.rows) ? d.rows : null;
+  if (!list) return false;
+  return list.some((x) => x?.src === "espn" || (x?.kickoff && x?.id != null && !isApifId(x.id)));
 }
 
 function stripPrefix(id) {
@@ -531,7 +551,8 @@ export async function fetchLeagueTable(espnSlug) {
       season: String(al.season),
     };
   } catch {
-    return espn.fetchLeagueTable(espnSlug);
+    const t = await espn.fetchLeagueTable(espnSlug);
+    return { ...t, src: "espn" };
   }
 }
 
@@ -563,13 +584,33 @@ export async function fetchLeagueAssists(espnSlug) {
    callers must gate APIF-only features on src === "apif". */
 export async function fetchLeagueClubs(espnSlug) {
   const al = apifLeagueFor(espnSlug);
+  const snapKey = `apif:clubs:${al ? `${al.id}:${al.season}` : espnSlug}`;
   if (al) {
     try {
       const clubs = await apif.fetchTeams(al.id, al.season);
-      if (clubs.length) return clubs.map((c) => ({ ...c, src: "apif" }));
-    } catch { /* fall back to ESPN */ }
+      if (clubs.length) {
+        const tagged = clubs.map((c) => ({ ...c, src: "apif" }));
+        cacheSet(snapKey, tagged, 30 * 24 * 60 * 60 * 1000);
+        return tagged;
+      }
+    } catch { /* fall through to snapshot, then ESPN */ }
+    // One blip must not poison the clubs cache with ESPN ids for a week
+    // (that froze squads and transfers on every club page).
+    const snap = cacheGet(snapKey);
+    if (snap?.length) return snap;
   }
   return (await espn.fetchTeams(espnSlug)).map((c) => ({ ...c, src: "espn" }));
+}
+
+/* Season injury list for a club page (API-Football only). */
+export async function fetchClubInjuries(espnSlug, teamId) {
+  const al = apifLeagueFor(espnSlug);
+  if (!al || !teamId) return [];
+  try {
+    return await apif.fetchTeamInjuries(teamId, al.season);
+  } catch {
+    return [];
+  }
 }
 
 /* Current squad for a club, by API-Football team id. */

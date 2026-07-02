@@ -98,7 +98,15 @@ export default function LeagueMatchDetailPage() {
     <div className="wrap" style={{ paddingTop: 14, minHeight: "85vh" }} {...swipe}>
       <Link to={`/league/${C.id}/matches`} style={{ fontSize: 13, textDecoration: "none" }}>← All matches</Link>
 
-      <ScoreHeader match={match} eyebrow={eyebrow} events={summary?.events} />
+      <ScoreHeader
+        match={match}
+        eyebrow={eyebrow}
+        events={summary?.events}
+        teamHref={(t) => {
+          const cid = t === match.home ? match.apifHomeId : match.apifAwayId;
+          return cid != null ? `/league/${C.id}/club/${cid}` : null;
+        }}
+      />
 
       <MatchTabsBar tabs={tabs} active={activeTab} onTab={setTab} />
 

@@ -243,6 +243,27 @@ function mapLeader(e, i) {
   };
 }
 
+/* Season-long injury/suspension list for a club (fixture-based fetchInjuries
+   covers match pages; this covers the club page). */
+export async function fetchTeamInjuries(teamId, season) {
+  const data = await apiFetch("injuries", { team: teamId, season });
+  const seen = new Set();
+  const out = [];
+  for (const i of data.response || []) {
+    const key = i.player?.id ?? i.player?.name;
+    if (seen.has(key)) continue; // one row per player, newest first in the feed
+    seen.add(key);
+    out.push({
+      player: i.player?.name || "?",
+      photo: i.player?.photo || null,
+      type: i.player?.type || "",
+      reason: i.player?.reason || "",
+      date: i.fixture?.date || "",
+    });
+  }
+  return out;
+}
+
 export async function fetchTopScorers(leagueId, season) {
   const data = await apiFetch("players/topscorers", { league: leagueId, season });
   return (data.response || []).map(mapLeader);

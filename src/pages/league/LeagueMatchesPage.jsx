@@ -109,10 +109,11 @@ export default function LeagueMatchesPage() {
     };
   }, [matches]);
 
+  // Starred clubs are stored by API-Football team id (the club-page route id);
+  // espnId only exists on ESPN-fallback matches, so check both id spaces.
   const isFav = (m) => {
-    const hid = m.home.espnId;
-    const aid = m.away.espnId;
-    return (hid && favs.includes(hid)) || (aid && favs.includes(aid));
+    const ids = [m.apifHomeId, m.apifAwayId, m.home.espnId, m.away.espnId];
+    return ids.some((x) => x != null && favs.includes(String(x)));
   };
 
   const noFixtures = !loading && (!matches || matches.length === 0) && !error;

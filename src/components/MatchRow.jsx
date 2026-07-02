@@ -14,6 +14,35 @@ export default function MatchRow({ m, fav = false, linkBase = "/match" }) {
   const clickable = !m.placeholder && !!m.id;
   const go = () => clickable && navigate(`${linkBase}/${m.id}`);
 
+  // Team names deep-link to their own page: World Cup sides by team code,
+  // club sides by API-Football id (the club-page route id), derived from the
+  // league the card lives in. Placeholder sides ("Winner Match 74") get none.
+  const teamPage = (team) => {
+    if (team?.code) return `/team/${team.code}`;
+    const league = /^(\/league\/[^/]+)\/match$/.exec(linkBase || "");
+    const cid = team === m.home ? m.apifHomeId : m.apifAwayId;
+    return league && cid != null ? `${league[1]}/club/${cid}` : null;
+  };
+  const TeamName = ({ team, right }) => {
+    const href = teamPage(team);
+    const style = {
+      fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis",
+      whiteSpace: "nowrap", ...(right ? { textAlign: "right" } : {}),
+    };
+    if (!href) return <span style={style}>{team.name}</span>;
+    return (
+      <span
+        role="link"
+        tabIndex={0}
+        style={style}
+        onClick={(e) => { e.stopPropagation(); navigate(href); }}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigate(href); } }}
+      >
+        {team.name}
+      </span>
+    );
+  };
+
   return (
     <div
       className={"card" + (fav ? " fav" : "")}
@@ -30,9 +59,7 @@ export default function MatchRow({ m, fav = false, linkBase = "/match" }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           <Flag team={m.home} />
-          <span style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {m.home.name}
-          </span>
+          <TeamName team={m.home} />
         </div>
         <div
           className={"disp" + (live ? " pulse" : "")}
@@ -47,9 +74,7 @@ export default function MatchRow({ m, fav = false, linkBase = "/match" }) {
           {upcoming ? (p ? p.time : "TBC") : `${m.hg ?? "–"} : ${m.ag ?? "–"}`}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end", minWidth: 0 }}>
-          <span style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "right" }}>
-            {m.away.name}
-          </span>
+          <TeamName team={m.away} right />
           <Flag team={m.away} />
         </div>
       </div>
