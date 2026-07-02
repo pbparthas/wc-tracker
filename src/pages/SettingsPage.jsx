@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   getKey, setKey, forgetKey, hasKey, isRemembered,
   getModel, setModel, testKey, DEFAULT_MODEL,
@@ -11,6 +11,7 @@ import { GROUPS, TEAMS } from "../data/teams.js";
 import InstallCard from "../components/InstallCard.jsx";
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const [keyInput, setKeyInput] = useState(() => getKey());
   const [remember, setRemember] = useState(() => isRemembered() || !hasKey());
   const [model, setModelInput] = useState(getModel);
@@ -80,7 +81,13 @@ export default function SettingsPage() {
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
-      <Link to="/" style={{ fontSize: 13, textDecoration: "none" }}>← Home</Link>
+      {/* Settings is a common page reachable from every mode — go back to
+          wherever the user came from, not into the World Cup shell. */}
+      {window.history.length > 1 ? (
+        <button className="ai-toggle" style={{ fontSize: 13, padding: 0 }} onClick={() => navigate(-1)}>← Back</button>
+      ) : (
+        <Link to="/" style={{ fontSize: 13, textDecoration: "none" }}>← Home</Link>
+      )}
       <h2 className="disp" style={{ fontSize: 20, fontWeight: 800, margin: "10px 0" }}>SETTINGS</h2>
 
       <div className="card" style={{ padding: 16, marginBottom: 12 }}>

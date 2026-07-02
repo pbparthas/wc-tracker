@@ -13,9 +13,11 @@ const bucketOf = (p) => {
   return ["G", "D", "M", "F"].includes(c) ? c : "";
 };
 
-export default function SquadList({ players, loading, error, onPick, emptyNote }) {
-  if (loading) return <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading squad…</p>;
-  if (error || !players) {
+export default function SquadList({ players, loading, onPick, emptyNote }) {
+  // An empty list is as blank as no list — without this an empty squad
+  // rendered nothing at all (every position bucket empty, no message).
+  if (!players?.length) {
+    if (loading) return <p className="pulse" style={{ color: "var(--muted)", fontSize: 13 }}>Loading squad…</p>;
     return (
       <p style={{ color: "var(--muted)", fontSize: 13 }}>
         {emptyNote || "Squad not available from the data feed yet — check back later."}

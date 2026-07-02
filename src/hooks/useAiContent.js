@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { generateContent, hasKey } from "../lib/gemini.js";
 import { systemInstruction } from "../lib/prompts.js";
 import { cacheGet, cacheSet } from "../lib/storage.js";
@@ -10,6 +10,11 @@ export function useAiContent(cacheKey, buildPrompt, { ttlMs = Infinity, groundin
   const [item, setItem] = useState(() => cacheGet(full));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Some cache keys carry data state (e.g. matches played) and settle only
+  // after a fetch — re-read the cache when the key changes, or a stored entry
+  // under the final key would never surface.
+  useEffect(() => { setItem(cacheGet(full)); }, [full]);
 
   const generate = useCallback(async () => {
     setLoading(true);

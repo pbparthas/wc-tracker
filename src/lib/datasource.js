@@ -602,6 +602,45 @@ export async function fetchLeagueClubs(espnSlug) {
   return (await espn.fetchTeams(espnSlug)).map((c) => ({ ...c, src: "espn" }));
 }
 
+/* Club facts (founded, ground, capacity) for the club page's default view. */
+export async function fetchClubInfo(espnSlug, teamId) {
+  if (!apifLeagueFor(espnSlug) || !teamId) return null;
+  try {
+    return await apif.fetchTeamInfo(teamId);
+  } catch {
+    return null;
+  }
+}
+
+/* A club's finishing position in each of the last five completed seasons,
+   from the standings archive. Each season's full table is cached per league —
+   finished seasons never change, so one set of calls serves every club page
+   in that league for months. Seasons where the club wasn't in this division
+   come back with pos: null. */
+const HISTORY_SEASONS = 5;
+export async function fetchClubSeasonHistory(espnSlug, teamId) {
+  const al = apifLeagueFor(espnSlug);
+  if (!al || !teamId) return [];
+  const seasons = [];
+  for (let s = al.season - HISTORY_SEASONS; s < al.season; s++) seasons.push(s);
+  return Promise.all(
+    seasons.map(async (season) => {
+      const key = `apif:hist:${al.id}:${season}`;
+      let rows = cacheGet(key);
+      if (!rows) {
+        try {
+          rows = await apif.fetchLeagueTable(al.id, season);
+          if (rows.length) cacheSet(key, rows, 180 * 24 * 60 * 60 * 1000);
+        } catch {
+          rows = [];
+        }
+      }
+      const row = (rows || []).find((r) => String(r.team.id) === String(teamId));
+      return { season, pos: row?.rank || null, pts: row?.pts ?? null, of: (rows || []).length };
+    })
+  );
+}
+
 /* Season injury list for a club page (API-Football only). */
 export async function fetchClubInjuries(espnSlug, teamId) {
   const al = apifLeagueFor(espnSlug);
@@ -613,9 +652,19 @@ export async function fetchClubInjuries(espnSlug, teamId) {
   }
 }
 
-/* Current squad for a club, by API-Football team id. */
-export async function fetchClubSquad(espnSlug, teamId) {
-  if (!apifLeagueFor(espnSlug) || !teamId) return [];
+/* Current squad for a club. API-Football by team id; when the club list came
+   from the ESPN fallback (src === "espn") the id lives in ESPN's id space, so
+   use ESPN's roster endpoint instead of showing an empty tab. */
+export async function fetchClubSquad(espnSlug, teamId, src = "apif") {
+  if (!teamId) return [];
+  if (src === "espn") {
+    try {
+      return await espn.fetchRoster(teamId, espnSlug);
+    } catch {
+      return [];
+    }
+  }
+  if (!apifLeagueFor(espnSlug)) return [];
   return apif.fetchSquad(teamId);
 }
 

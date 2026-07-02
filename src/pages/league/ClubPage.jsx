@@ -5,11 +5,11 @@ import SquadList from "../../components/SquadList.jsx";
 import PlayerSheet from "../../components/PlayerSheet.jsx";
 import { MatchTabsBar } from "../../components/MatchDetailShared.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
-import { fetchLeagueClubs, fetchLeagueTable, fetchClubSquad, fetchClubTransfers, fetchClubInjuries } from "../../lib/datasource.js";
+import { fetchLeagueClubs, fetchLeagueTable, fetchClubSquad, fetchClubTransfers, fetchClubInjuries, fetchClubInfo, fetchClubSeasonHistory } from "../../lib/datasource.js";
 import { useCached } from "../../hooks/useCached.js";
 import { useFavorites } from "../../hooks/useFavorites.js";
 import { useAiContent } from "../../hooks/useAiContent.js";
-import { clubPrompt } from "../../lib/prompts.js";
+import { clubSeasonPrompt } from "../../lib/prompts.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -37,6 +37,64 @@ function PositionBadge({ pos, zones, seasonLabel }) {
         <div>{seasonLabel}</div>
       </div>
     </div>
+  );
+}
+
+const ordinal = (n) => {
+  const s = n % 100;
+  if (s >= 11 && s <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][Math.min(n % 10, 4)] || "th"}`;
+};
+
+/* "2021" → "2021-22" — API-Football seasons are the starting year. */
+const seasonLabel = (y) => `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+
+/* Founded / ground / capacity, straight from the data feed — no AI needed. */
+function FactsCard({ info, club }) {
+  const facts = [
+    info?.founded && ["Founded", String(info.founded)],
+    (info?.venue || club.venue) && [
+      "Ground",
+      `${info?.venue || club.venue}${info?.capacity ? ` · ${info.capacity.toLocaleString("en-IN")} seats` : ""}`,
+    ],
+    (info?.city || club.city) && ["City", [info?.city || club.city, info?.country].filter(Boolean).join(", ")],
+  ].filter(Boolean);
+  if (!facts.length) return null;
+  return (
+    <div className="card" style={{ padding: "10px 14px", marginBottom: 10 }}>
+      {facts.map(([k, v]) => (
+        <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "5px 0", fontSize: 13 }}>
+          <span style={{ color: "var(--muted)" }}>{k}</span>
+          <span style={{ fontWeight: 600, textAlign: "right" }}>{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* Finishing position in each of the last five completed seasons. A dash means
+   the club wasn't in this division (or competition) that year. */
+function SeasonStrip({ history }) {
+  if (!history?.length || !history.some((h) => h.pos)) return null;
+  return (
+    <>
+      <h2 className="disp section-h">LAST FIVE SEASONS</h2>
+      <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          {history.map((h) => (
+            <div key={h.season} style={{ flex: 1, textAlign: "center", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 8, padding: "8px 2px" }}>
+              <div className="disp" style={{ fontSize: 17, fontWeight: 800, color: h.pos ? "var(--chalk)" : "var(--muted)" }}>
+                {h.pos ? ordinal(h.pos) : "—"}
+              </div>
+              <div style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.04em" }}>{seasonLabel(h.season)}</div>
+            </div>
+          ))}
+        </div>
+        {history.some((h) => !h.pos) && (
+          <p style={{ fontSize: 11, color: "var(--muted)", margin: "8px 0 0" }}>— not in this competition that season</p>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -95,11 +153,20 @@ export default function ClubPage() {
     apifId ? fetchClubTransfers(C.slug, id, { sinceIso: C.window.opensIso }) : Promise.resolve([])
   );
   const { data: table } = useCached(`table:${C.id}`, DAY, () => fetchLeagueTable(C.slug));
-  const squad = useCached(`squad:${C.id}:${id}:${apifId ? "a" : "n"}`, DAY, () =>
-    apifId ? fetchClubSquad(C.slug, id) : Promise.resolve([])
+  // Three-state readiness suffix: no club yet / apif id / espn id — the key
+  // must flip when the club loads either way, or the pre-club [] would stick.
+  const idKind = club ? (apifId ? "a" : "e") : "n";
+  const squad = useCached(`squad:${C.id}:${id}:${idKind}`, DAY, () =>
+    club ? fetchClubSquad(C.slug, id, club.src) : Promise.resolve([])
   );
   const injuries = useCached(`clubinjuries:${C.id}:${id}:${apifId ? "a" : "n"}`, 6 * 60 * 60 * 1000, () =>
     apifId ? fetchClubInjuries(C.slug, id) : Promise.resolve([])
+  );
+  const { data: info } = useCached(`clubinfo:${C.id}:${id}:${apifId ? "a" : "n"}`, 30 * DAY, () =>
+    apifId ? fetchClubInfo(C.slug, id) : Promise.resolve(null)
+  );
+  const { data: history } = useCached(`clubseasons:${C.id}:${id}:${apifId ? "a" : "n"}`, 30 * DAY, () =>
+    apifId ? fetchClubSeasonHistory(C.slug, id) : Promise.resolve([])
   );
   const { favs, toggle } = useFavorites(C.id);
   const [picked, setPicked] = useState(null);
@@ -111,10 +178,17 @@ export default function ClubPage() {
   const tableRow = table?.rows?.find((r) => r.team.espnId === id || r.team.name === club?.name);
   const tablePos = tableRow ? table.rows.indexOf(tableRow) + 1 : null;
 
-  const profile = useAiContent(`club:${C.id}:` + id, () => clubPrompt(club, clubMoves), {
-    ttlMs: DAY,
-    grounding: true,
-  });
+  // AI earns its place only once the season is underway: the static facts
+  // render by default, the story of the season can't be looked up in a feed.
+  const seasonOn = !!tableRow && tableRow.p > 0;
+  const story = useAiContent(
+    // played-count in the key so the story refreshes as the season moves on
+    seasonOn ? `clubseason:${C.id}:${id}:p${tableRow.p}` : null,
+    () =>
+      seasonOn &&
+      clubSeasonPrompt(club, C.name, C.season.label, tableRow, tablePos, table.rows.length, C.zones, clubMoves),
+    { ttlMs: DAY, grounding: true }
+  );
 
   if (!club) {
     return (
@@ -190,7 +264,10 @@ export default function ClubPage() {
 
       {tab === "overview" && (
         <>
-          <AiCard title={`${club.name} right now`} ai={profile} cta="✨ Club profile" />
+          <FactsCard info={info} club={club} />
+          <SeasonStrip history={history} />
+
+          {seasonOn && <AiCard title={`${club.name}'s season`} ai={story} cta="✨ Season so far" />}
 
           {(ins.length > 0 || outs.length > 0) && (
             <>
@@ -208,16 +285,12 @@ export default function ClubPage() {
               usually has the very latest deals and rumors.
             </div>
           )}
-
-          <p style={{ fontSize: 12, color: "var(--muted)", margin: "12px 0 20px" }}>
-            {C.season.label} fixtures and results will appear once the schedule is released.
-          </p>
         </>
       )}
 
       {tab === "squad" && (
         <div className="card" style={{ padding: "6px 14px 12px", marginBottom: 20 }}>
-          <SquadList players={squad.data} loading={squad.loading} error={squad.error} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
+          <SquadList players={squad.data} loading={squad.loading} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
         </div>
       )}
 

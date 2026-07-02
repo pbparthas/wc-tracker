@@ -274,6 +274,21 @@ export async function fetchTopAssists(leagueId, season) {
   return (data.response || []).map(mapLeader);
 }
 
+/* Single team's profile: founded year and home ground, for the club page's
+   facts card. */
+export async function fetchTeamInfo(teamId) {
+  const data = await apiFetch("teams", { id: teamId });
+  const x = data.response?.[0];
+  if (!x) return null;
+  return {
+    founded: x.team?.founded || null,
+    country: x.team?.country || "",
+    venue: x.venue?.name || "",
+    capacity: x.venue?.capacity || null,
+    city: x.venue?.city || "",
+  };
+}
+
 /* All clubs in a league/season, with API-Football team ids (needed for squads,
    transfers and per-player stats). */
 export async function fetchTeams(leagueId, season) {

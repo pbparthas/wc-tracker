@@ -253,21 +253,37 @@ export function confirmedMovesPrompt(leagueName, clubNames = []) {
   );
 }
 
-export function clubPrompt(club, moves) {
+/* Mid-season club story. Fires only once the season is underway — the static
+   facts (founded, ground, past finishes) render from the data feed instead. */
+export function clubSeasonPrompt(club, leagueName, seasonLabel, row, pos, total, zones, moves) {
+  const gd = row.gf - row.ga;
   const lines = [
-    `Write a profile of ${club.name} for a football app's club page, using Google Search to verify facts. Cover, in this order, with **bold** mini-headings:`,
-    "1. **The club** — two sentences of history and identity (founded, ground, what they're known for).",
-    "2. **Honours** — their major trophies with counts (league titles, domestic cups, European cups). If unsure of an exact count, say 'around' rather than inventing precision.",
-    "3. **Last five seasons** — their league finishing position in each of the last five completed seasons, one compact line.",
-    "4. **Right now** — current manager, the squad's shape, and what this window means for them.",
+    `Write a short story of ${club.name}'s ${leagueName} season so far (${seasonLabel}), using Google Search for recent context.`,
+    `Authoritative table facts: position ${pos} of ${total}, played ${row.p}, W${row.w} D${row.d} L${row.l}, ${row.pts} pts, GD ${gd > 0 ? "+" : ""}${gd}${row.form ? `, last five: ${row.form}` : ""}.`,
+    "Cover, with **bold** mini-headings:",
+    "1. **Season so far** — how it's going versus expectations: form trend, standout players, any managerial or injury storylines.",
   ];
+  const bandLines = (zones || [])
+    .map((z) => (z.upTo != null ? `top ${z.upTo}: ${z.label}` : `${z.from}+: ${z.label}`))
+    .join("; ");
+  if (pos <= 10) {
+    lines.push(
+      `2. **The road ahead** — what this position means for qualification. This league's structure: ${bandLines}. ` +
+      "Say what they're on course for, who they're chasing or holding off, and what has to happen from here."
+    );
+  } else {
+    lines.push(
+      `2. **The road ahead** — what's realistically at stake from ${pos}th (structure: ${bandLines}): ` +
+      "climbing to safety or mid-table, the run-in, what must change."
+    );
+  }
   if (moves?.length) {
     lines.push("Their confirmed moves this window (authoritative):");
-    for (const m of moves.slice(0, 12)) {
+    for (const m of moves.slice(0, 10)) {
       lines.push(`- ${m.player}: ${m.from || "?"} → ${m.to || "?"}${m.fee ? ` (${m.fee})` : ""}`);
     }
   }
-  lines.push("Keep it under 220 words total.");
+  lines.push("Keep it under 180 words total. Trust the table facts above over anything search returns.");
   return lines.join("\n");
 }
 

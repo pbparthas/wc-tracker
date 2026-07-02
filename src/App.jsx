@@ -35,7 +35,9 @@ export default function App() {
           <Outlet />
         </Suspense>
       </ErrorBoundary>
-      {pathname !== "/" && <BottomTabs />}
+      {/* No tabs on home (it has its own nav) or settings — settings is a
+          common utility page, not part of the World Cup or any league. */}
+      {pathname !== "/" && pathname !== "/settings" && <BottomTabs />}
     </div>
   );
 }

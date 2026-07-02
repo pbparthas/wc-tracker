@@ -28,6 +28,9 @@ export function useCached(key, ttlMs, fetcher) {
         const cached = cacheGet(key);
         if (cached) {
           setData(cached);
+          // A leftover error from a previous key (this hook survives route
+          // changes) must not shadow good cached data.
+          setError(null);
           return;
         }
       }
