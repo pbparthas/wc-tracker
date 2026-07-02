@@ -156,7 +156,9 @@ export default function ClubPage() {
   // Three-state readiness suffix: no club yet / apif id / espn id — the key
   // must flip when the club loads either way, or the pre-club [] would stick.
   const idKind = club ? (apifId ? "a" : "e") : "n";
-  const squad = useCached(`squad:${C.id}:${id}:${idKind}`, DAY, () =>
+  // 6h, not a day: during the transfer window the squads endpoint churns, and
+  // new signings should show up the same day they're announced.
+  const squad = useCached(`squad:${C.id}:${id}:${idKind}`, 6 * 60 * 60 * 1000, () =>
     club ? fetchClubSquad(C.slug, id, club.src) : Promise.resolve([])
   );
   const injuries = useCached(`clubinjuries:${C.id}:${id}:${apifId ? "a" : "n"}`, 6 * 60 * 60 * 1000, () =>
@@ -165,7 +167,11 @@ export default function ClubPage() {
   const { data: info } = useCached(`clubinfo:${C.id}:${id}:${apifId ? "a" : "n"}`, 30 * DAY, () =>
     apifId ? fetchClubInfo(C.slug, id) : Promise.resolve(null)
   );
-  const { data: history } = useCached(`clubseasons:${C.id}:${id}:${apifId ? "a" : "n"}`, 30 * DAY, () =>
+  // 30 minutes, not days: each past season's table is cached for months under
+  // its own key, so rebuilding the strip is free — but a season that failed to
+  // load (and was dropped) gets retried instead of staying missing for weeks.
+  // ("clubseasons2" evicts v1 entries that cached wrong dashes for 30 days.)
+  const { data: history } = useCached(`clubseasons2:${C.id}:${id}:${apifId ? "a" : "n"}`, 30 * 60 * 1000, () =>
     apifId ? fetchClubSeasonHistory(C.slug, id) : Promise.resolve([])
   );
   const { favs, toggle } = useFavorites(C.id);
@@ -175,7 +181,16 @@ export default function ClubPage() {
   const outs = (moves || []).filter((m) => m.fromId === id || (club && m.from === club.name));
   const clubMoves = [...ins, ...outs];
 
-  const tableRow = table?.rows?.find((r) => r.team.espnId === id || r.team.name === club?.name);
+  // API-Football's squads endpoint lags the transfer window by days — its own
+  // transfers feed is fresher. Anyone confirmed as leaving this window is
+  // dropped from the squad list rather than shown as a current player.
+  const norm = (n) => (n || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const gone = new Set(outs.map((m) => norm(m.player)));
+  const squadPlayers = gone.size ? (squad.data || []).filter((p) => !gone.has(norm(p.name))) : squad.data;
+
+  const tableRow = table?.rows?.find(
+    (r) => (r.team.apifId && String(r.team.apifId) === String(id)) || r.team.espnId === id || r.team.name === club?.name
+  );
   const tablePos = tableRow ? table.rows.indexOf(tableRow) + 1 : null;
 
   // AI earns its place only once the season is underway: the static facts
@@ -290,7 +305,7 @@ export default function ClubPage() {
 
       {tab === "squad" && (
         <div className="card" style={{ padding: "6px 14px 12px", marginBottom: 20 }}>
-          <SquadList players={squad.data} loading={squad.loading} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
+          <SquadList players={squadPlayers} loading={squad.loading} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
         </div>
       )}
 

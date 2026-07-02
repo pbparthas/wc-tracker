@@ -131,7 +131,7 @@ async function getAllFixtures(bust) {
     .then((fixtures) => {
       allFixturesCache = fixtures;
       allFixturesFetchedAt = Date.now();
-      cacheSet(ALL_FIXTURES_KEY, fixtures, 24 * 60 * 60 * 1000);
+      cacheSet(ALL_FIXTURES_KEY, fixtures, 7 * 24 * 60 * 60 * 1000);
       return fixtures;
     })
     .finally(() => { allFixturesInflight = null; });
@@ -515,7 +515,10 @@ export async function fetchLeagueMatches(espnSlug, opts = {}) {
     const matches = fixtures.map(fixtureToMatch);
     leagueFixturesCache[cacheKey] = matches;
     leagueFixturesFetchedAt[cacheKey] = now;
-    if (matches.length) cacheSet(snapKey, matches, 7 * 24 * 60 * 60 * 1000);
+    // 30 days: the snapshot's job is surviving bad stretches (slow mobile
+    // links time the ~1 MB season download out repeatedly) — a stale full
+    // fixture list beats ESPN's near-term scoreboard every time.
+    if (matches.length) cacheSet(snapKey, matches, 30 * 24 * 60 * 60 * 1000);
     return matches;
   } catch {
     // One API-Football blip must not swap the full season for ESPN's
@@ -543,7 +546,15 @@ export async function fetchLeagueTable(espnSlug) {
     if (!rows.length) throw new Error("empty table");
     return {
       rows: rows.map((r) => ({
-        team: { code: null, espnId: null, name: r.team.name, flag: "", logo: r.team.logo },
+        // apifId links the row to its club page; ESPN's fallback table has none.
+        team: {
+          code: null,
+          espnId: null,
+          apifId: r.team.id != null ? String(r.team.id) : null,
+          name: r.team.name,
+          flag: "",
+          logo: r.team.logo,
+        },
         p: r.p, w: r.w, d: r.d, l: r.l,
         gf: r.gf, ga: r.ga, pts: r.pts,
         form: r.form || "",
@@ -623,7 +634,7 @@ export async function fetchClubSeasonHistory(espnSlug, teamId) {
   if (!al || !teamId) return [];
   const seasons = [];
   for (let s = al.season - HISTORY_SEASONS; s < al.season; s++) seasons.push(s);
-  return Promise.all(
+  const entries = await Promise.all(
     seasons.map(async (season) => {
       const key = `apif:hist:${al.id}:${season}`;
       let rows = cacheGet(key);
@@ -635,10 +646,15 @@ export async function fetchClubSeasonHistory(espnSlug, teamId) {
           rows = [];
         }
       }
-      const row = (rows || []).find((r) => String(r.team.id) === String(teamId));
-      return { season, pos: row?.rank || null, pts: row?.pts ?? null, of: (rows || []).length };
+      // A season whose table didn't load (timeout, rate limit, plan coverage)
+      // is UNKNOWN, not "wasn't in the division" — drop it rather than show a
+      // wrong dash. Only a loaded table missing the club is a genuine dash.
+      if (!rows?.length) return null;
+      const row = rows.find((r) => String(r.team.id) === String(teamId));
+      return { season, pos: row?.rank || null, pts: row?.pts ?? null, of: rows.length };
     })
   );
+  return entries.filter(Boolean);
 }
 
 /* Season injury list for a club page (API-Football only). */

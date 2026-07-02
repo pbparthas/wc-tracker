@@ -1,15 +1,44 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MatchRow from "../components/MatchRow.jsx";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useFavorites } from "../hooks/useFavorites.js";
-import { TEAMS } from "../data/teams.js";
+import { GROUPS, TEAMS } from "../data/teams.js";
+
+/* The country picker lives here (the World Cup favourites hub), not in the
+   common Settings page — starring nations is a WC thing, clubs have their own
+   stars per league. */
+function TeamPicker({ favs, toggle, startOpen }) {
+  const [open, setOpen] = useState(startOpen);
+  return (
+    <div className="card" style={{ padding: 16, margin: "10px 0" }}>
+      <button className="ai-toggle" style={{ width: "100%", padding: 0 }} onClick={() => setOpen((o) => !o)}>
+        <span className="eyebrow">Pick your teams</span>
+        <span className="ai-chev">{open ? "▾ hide" : "▸ show"}</span>
+      </button>
+      {open && GROUPS.map((g) => (
+        <div key={g.id} className="team-grid" style={{ margin: "8px 0 0" }}>
+          {g.teams.map((c) => (
+            <button
+              key={c}
+              className={"iconbtn" + (favs.includes(c) ? " on" : "")}
+              onClick={() => toggle(c)}
+              style={{ fontSize: 11, padding: "6px 2px" }}
+            >
+              {TEAMS[c].flag} {c}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /* Every match involving a favourite team, tournament-wide. */
 export default function YourTeamsPage() {
   const navigate = useNavigate();
   const { matches, loading } = useSchedule();
-  const { favs } = useFavorites();
+  const { favs, toggle } = useFavorites();
 
   const favMatches = matches.filter((m) => favs.includes(m.home.code) || favs.includes(m.away.code));
   const live = favMatches.filter((m) => m.state === "in");
@@ -23,10 +52,12 @@ export default function YourTeamsPage() {
         YOUR ★ TEAMS
       </h2>
 
+      <TeamPicker favs={favs} toggle={toggle} startOpen={favs.length === 0} />
+
       {favs.length === 0 ? (
         <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 8 }}>
-          No favourites yet — star teams from the <Link to="/teams">Teams tab</Link> or in{" "}
-          <Link to="/settings">Settings</Link> and their matches will be tracked here.
+          No favourites yet — star teams above or from the <Link to="/teams">Teams tab</Link>{" "}
+          and their matches will be tracked here.
         </p>
       ) : (
         <>

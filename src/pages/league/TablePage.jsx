@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import LeadersList from "../../components/LeadersList.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchLeagueTable, fetchLeagueScorers, fetchLeagueAssists } from "../../lib/datasource.js";
@@ -107,10 +107,20 @@ export default function TablePage() {
                       {i + 1}
                     </td>
                     <td className="tname">
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        {r.team.logo && <img src={r.team.logo} alt="" width={16} height={16} loading="lazy" />}
-                        {r.team.name}
-                      </span>
+                      {r.team.apifId ? (
+                        <Link
+                          to={`/league/${C.id}/club/${r.team.apifId}`}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", color: "inherit" }}
+                        >
+                          {r.team.logo && <img src={r.team.logo} alt="" width={16} height={16} loading="lazy" />}
+                          {r.team.name}
+                        </Link>
+                      ) : (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          {r.team.logo && <img src={r.team.logo} alt="" width={16} height={16} loading="lazy" />}
+                          {r.team.name}
+                        </span>
+                      )}
                       {r.form ? <div style={{ marginTop: 4 }}><FormPips form={r.form} /></div> : null}
                     </td>
                     <td>{r.p}</td><td>{r.w}</td><td>{r.d}</td><td>{r.l}</td>

@@ -41,16 +41,16 @@ export function throttle(fn) {
   });
 }
 
-function apiFetch(endpoint, params = {}) {
-  return throttle(() => rawApiFetch(endpoint, params));
+function apiFetch(endpoint, params = {}, opts = {}) {
+  return throttle(() => rawApiFetch(endpoint, params, opts));
 }
 
-async function rawApiFetch(endpoint, params) {
+async function rawApiFetch(endpoint, params, opts = {}) {
   const qs = new URLSearchParams(params).toString();
   const url = `${PROXY}/${endpoint}${qs ? "?" + qs : ""}`;
   // A hung request would otherwise block the whole serial queue.
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs || REQUEST_TIMEOUT_MS);
   let res;
   try {
     // no-store, same as the ESPN client: we poll these URLs during live play,
@@ -101,7 +101,12 @@ export async function fetchFixtures(leagueId, { season, date, live } = {}) {
   if (season) params.season = season;
   if (date) params.date = date;
   if (live) params.live = "all";
-  const data = await apiFetch("fixtures", params);
+  // A whole season is ~380 fixtures (~1 MB): on a slow mobile link the normal
+  // 12s timeout kills it, the ESPN fallback (near-term scoreboard only) takes
+  // over, and the fixture list collapses to a match or two. Give the heavy
+  // full-season download a longer leash.
+  const fullSeason = season && !date && !live;
+  const data = await apiFetch("fixtures", params, fullSeason ? { timeoutMs: 30000 } : {});
   return (data.response || []).map(normalizeFixture);
 }
 

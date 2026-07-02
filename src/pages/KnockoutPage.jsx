@@ -13,13 +13,13 @@ export default function KnockoutPage() {
         ROAD TO THE <span style={{ color: "var(--gold)" }}>FINAL</span>
       </h2>
       <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 14 }}>
-        Tracking every round until the trophy is lifted at MetLife on 19 July. Swipe the bracket sideways.
+        Tracking every round until the trophy is lifted at MetLife — 12:30 AM IST, 20 July. Swipe the bracket sideways.
       </p>
 
       <BracketView matches={matches} standings={standings} />
 
       <div style={{ margin: "6px 0 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span className="eyebrow">Tournament phases</span>
+        <span className="eyebrow">Tournament phases · IST dates</span>
         <button className="btn" onClick={() => refresh(true)} disabled={loading}>
           {loading ? "Fetching…" : "↻ Refresh"}
         </button>

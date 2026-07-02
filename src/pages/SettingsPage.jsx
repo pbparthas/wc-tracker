@@ -6,8 +6,6 @@ import {
 } from "../lib/gemini.js";
 import { clearPrefix } from "../lib/storage.js";
 import { getMode, applyMode } from "../lib/theme.js";
-import { useFavorites } from "../hooks/useFavorites.js";
-import { GROUPS, TEAMS } from "../data/teams.js";
 import InstallCard from "../components/InstallCard.jsx";
 
 export default function SettingsPage() {
@@ -21,7 +19,6 @@ export default function SettingsPage() {
   const [shared, setShared] = useState(null);
   const [persist, setPersist] = useState(null); // null = unknown/unsupported, true/false otherwise
   const [mode, setMode] = useState(getMode);
-  const { favs, toggle } = useFavorites();
 
   useEffect(() => {
     let alive = true;
@@ -181,24 +178,6 @@ export default function SettingsPage() {
       </div>
 
       <InstallCard />
-
-      <div className="card" style={{ padding: 16, marginBottom: 12 }}>
-        <div className="eyebrow" style={{ marginBottom: 10 }}>Favourite teams</div>
-        {GROUPS.map((g) => (
-          <div key={g.id} className="team-grid" style={{ marginBottom: 6 }}>
-            {g.teams.map((c) => (
-              <button
-                key={c}
-                className={"iconbtn" + (favs.includes(c) ? " on" : "")}
-                onClick={() => toggle(c)}
-                style={{ fontSize: 11, padding: "6px 2px" }}
-              >
-                {TEAMS[c].flag} {c}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>
 
       <div className="card" style={{ padding: 16, marginBottom: 12 }}>
         <div className="eyebrow" style={{ marginBottom: 10 }}>Storage</div>
