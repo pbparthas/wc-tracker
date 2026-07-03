@@ -44,8 +44,24 @@ export function EventSummary({ events, match }) {
   const shoot = evs.filter((e) => ["pen", "miss"].includes(e.kind) && isShoot(e));
   if (!goals.length && !reds.length && !shoot.length && !wentToPens) return null;
 
-  const homeGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.home) : isTeam(e, match.home)));
-  const awayGoals = goals.filter((e) => (e.kind === "og" ? !isTeam(e, match.away) : isTeam(e, match.away)));
+  // Own-goal side: API-Football tags an og with the team CREDITED with the
+  // goal (an Egyptian og arrives tagged Australia), so the feed's team IS the
+  // side to show it on — flipping it painted the goal on the wrong side of
+  // the scoreboard. Some sources tag the scorer's team instead, so as a
+  // safety net: if the split disagrees with the score and flipping own goals
+  // reconciles it, flip.
+  const splitGoals = (flipOg) => ({
+    home: goals.filter((e) => (e.kind === "og" && flipOg ? !isTeam(e, match.home) : isTeam(e, match.home))),
+    away: goals.filter((e) => (e.kind === "og" && flipOg ? !isTeam(e, match.away) : isTeam(e, match.away))),
+  });
+  let { home: homeGoals, away: awayGoals } = splitGoals(false);
+  if (match.hg != null && goals.some((e) => e.kind === "og")) {
+    const agrees = (s) => s.home.length === match.hg && s.away.length === match.ag;
+    if (!agrees({ home: homeGoals, away: awayGoals })) {
+      const flipped = splitGoals(true);
+      if (agrees(flipped)) ({ home: homeGoals, away: awayGoals } = flipped);
+    }
+  }
   const homeReds = reds.filter((e) => isTeam(e, match.home));
   const awayReds = reds.filter((e) => isTeam(e, match.away));
 
@@ -735,6 +751,10 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam, match }) {
   const awayW = live ? live.away : parseInt(percent?.away) || 0;
   const total = homeW + draw + awayW || 100;
   const lbl = (n) => `${n}%`;
+  // A knockout tie can't END drawn — the "draw" probability is the chance of
+  // being level after 90, i.e. extra time (and possibly penalties).
+  const knockout = /round of|quarter|semi|final|third|knockout|play-off/i.test(match?.stage || "");
+  const drawLabel = knockout ? "extra time" : "draw";
 
   const FormDots = ({ form }) => {
     if (!form) return null;
@@ -765,7 +785,7 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam, match }) {
           <b style={{ textAlign: "left", color: homeW >= awayW ? "var(--chalk)" : "var(--muted)" }}>
             {homeTeam?.name || "Home"} <span style={{ fontWeight: 800 }}>{lbl(homeW)}</span>
           </b>
-          <span style={{ color: "var(--muted)", fontSize: 11, padding: "0 8px", alignSelf: "center" }}>draw {lbl(draw)}</span>
+          <span style={{ color: "var(--muted)", fontSize: 11, padding: "0 8px", alignSelf: "center" }}>{drawLabel} {lbl(draw)}</span>
           <b style={{ textAlign: "right", color: awayW > homeW ? "var(--chalk)" : "var(--muted)" }}>
             <span style={{ fontWeight: 800 }}>{lbl(awayW)}</span> {awayTeam?.name || "Away"}
           </b>
@@ -780,8 +800,8 @@ export function PredictionsCard({ predictions, homeTeam, awayTeam, match }) {
       {isLive && (
         <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 8 }}>
           Live estimate from the score &amp; time left — shifts as the game goes.
-          {minute >= 85 && match.hg === match.ag && /round|quarter|semi|final/i.test(match.stage || "") &&
-            " Level in a knockout: “draw” here means extra time and possibly penalties."}
+          {minute >= 85 && match.hg === match.ag && knockout &&
+            " Still level at the end: extra time, then penalties if needed."}
         </div>
       )}
 
