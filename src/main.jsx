@@ -12,6 +12,21 @@ import "./styles/global.css";
 
 import App from "./App.jsx";
 import { getMode, applyMode } from "./lib/theme.js";
+import { purgeVolatile } from "./lib/freshStart.js";
+
+/* A fresh app open starts clean and at home. PWAs reopen on whatever route
+   the last session ended on, serving day-old caches — the user's fix was
+   hard-refreshing 4-5 times. On a NEW session: purge the volatile data caches
+   (settings, favourites, AI stories and outage snapshots all survive) and
+   land on the dashboard. In-session reloads (service-worker auto-updates,
+   chunk-rotation reloads) keep the current page and caches. */
+try {
+  if (!sessionStorage.getItem("golazo:session")) {
+    sessionStorage.setItem("golazo:session", "1");
+    purgeVolatile();
+    if (location.hash && location.hash !== "#/") location.replace("#/");
+  }
+} catch { /* private mode — sessionStorage unavailable */ }
 import HomePage from "./pages/HomePage.jsx";
 import MatchesPage from "./pages/MatchesPage.jsx";
 
