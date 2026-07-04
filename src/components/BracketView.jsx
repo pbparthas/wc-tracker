@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Flag from "./Flag.jsx";
 import { assembleBracket } from "../lib/bracket.js";
@@ -79,10 +79,28 @@ function Tie({ m }) {
 
 export default function BracketView({ matches, standings }) {
   const rounds = assembleBracket(matches, standings);
+  const wrapRef = useRef(null);
+  const scrolledTo = useRef(null);
+
+  // Open on the tournament's ACTIVE round — the first with anything still to
+  // play — instead of always Round of 32. Once a round is fully decided the
+  // bracket advances with the tournament; finished rounds stay a swipe back.
+  const decided = (m) => m && !m.placeholder && m.state === "post";
+  const active = rounds.find((r) => !r.matches.every(decided)) || rounds[rounds.length - 1];
+
+  useEffect(() => {
+    // Re-scroll only when the active round itself changes (e.g. the last R32
+    // result lands after mount) — never fight the user's own swiping.
+    if (!wrapRef.current || scrolledTo.current === active.id) return;
+    scrolledTo.current = active.id;
+    const col = wrapRef.current.querySelector(`[data-round="${active.id}"]`);
+    if (col) wrapRef.current.scrollLeft = col.offsetLeft - wrapRef.current.offsetLeft;
+  }, [active.id]);
+
   return (
-    <div className="bracket">
+    <div className="bracket" ref={wrapRef}>
       {rounds.map((r) => (
-        <div className="bracket-col" key={r.id}>
+        <div className="bracket-col" key={r.id} data-round={r.id}>
           <div className="eyebrow" style={{ textAlign: "center", color: r.id === "FINAL" ? "var(--gold)" : undefined }}>
             {r.id === "FINAL" ? "🏆 " : ""}{r.label}
           </div>
