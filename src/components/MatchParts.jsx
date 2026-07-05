@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import Flag from "./Flag.jsx";
 import { liveWinProbability, parseMatchMinute } from "../lib/winprob.js";
 
 const ICONS = { goal: "⚽", og: "⚽", pen: "⚽", miss: "❌", yellow: "🟨", red: "🟥", sub: "🔁", event: "•" };
@@ -905,106 +903,141 @@ export function TimelineCard({ events }) {
   );
 }
 
-/* ── The road here: both teams' tournament so far ─────────────────── */
+/* ── The road here / form guide: prose from the schedule ──────────── */
 
-/* Short round tags for the journey rows. Quarter/semi checks must run before
-   /final/ — "Quarter-finals" contains "final". */
-function stageShort(stage) {
+/* Round names for prose. Quarter/semi checks must run before /final/ —
+   "Quarter-finals" contains "final". */
+function stageProse(stage) {
   const s = stage || "";
-  const g = /group\s+([a-l])/i.exec(s);
-  if (g) return "Grp " + g[1].toUpperCase();
-  if (/32/.test(s)) return "R32";
-  if (/16/.test(s)) return "R16";
-  if (/quarter/i.test(s)) return "QF";
-  if (/semi/i.test(s)) return "SF";
-  if (/third/i.test(s)) return "3rd place";
-  if (/final/i.test(s)) return "Final";
-  return s;
+  if (/32/.test(s)) return "round of 32";
+  if (/16/.test(s)) return "round of 16";
+  if (/quarter/i.test(s)) return "quarter-final";
+  if (/semi/i.test(s)) return "semi-final";
+  if (/third/i.test(s)) return "third-place match";
+  if (/final/i.test(s)) return "final";
+  return s.toLowerCase();
 }
 
-const ordinalWord = (n) => ["", "Won", "2nd in", "3rd in", "4th in"][n] || `${n}th in`;
+/* One result as a phrase, from the team's own perspective. */
+function resultPhrase(r) {
+  const opp = r.opp?.name || "their opponents";
+  if (r.pens) {
+    return r.res === "W"
+      ? `edged ${opp} ${r.pensScore} on penalties after a ${r.score} draw`
+      : `fell to ${opp} ${r.pensScore} on penalties after a ${r.score} draw`;
+  }
+  if (r.res === "W") return `beat ${opp} ${r.score}`;
+  if (r.res === "L") return `lost ${r.score} to ${opp}`;
+  return `drew ${r.score} with ${opp}`;
+}
 
-/* Every finished match each side has played in the tournament before this one,
-   straight from the schedule — the journey needs no AI. Rows link to the
-   matches themselves. */
-export function RoadSoFar({ match, allMatches, standings }) {
+/* A team's finished matches before this one, oldest first. Sides are matched
+   by country code (World Cup) or API-Football team id (clubs). */
+function priorResults(match, allMatches, side) {
+  const team = match[side];
+  const teamApifId = side === "home" ? match.apifHomeId : match.apifAwayId;
   const before = new Date(match.kickoff).getTime();
+  const isOurs = (m) => {
+    if (team?.code) return m.home.code === team.code ? "home" : m.away.code === team.code ? "away" : null;
+    if (teamApifId != null) return m.apifHomeId === teamApifId ? "home" : m.apifAwayId === teamApifId ? "away" : null;
+    return null;
+  };
+  return (allMatches || [])
+    .filter((m) => m.state === "post" && m.id !== match.id && new Date(m.kickoff).getTime() < before)
+    .map((m) => ({ m, us: isOurs(m) }))
+    .filter((x) => x.us)
+    .sort((a, b) => new Date(a.m.kickoff) - new Date(b.m.kickoff))
+    .map(({ m, us }) => {
+      const gf = us === "home" ? m.hg : m.ag;
+      const ga = us === "home" ? m.ag : m.hg;
+      const pf = us === "home" ? m.phg : m.pag;
+      const pa = us === "home" ? m.pag : m.phg;
+      const pens = pf != null && pa != null;
+      const res = gf > ga ? "W" : gf < ga ? "L" : pens ? (pf > pa ? "W" : "L") : "D";
+      return {
+        res,
+        pens,
+        score: `${gf}\u2013${ga}`,
+        pensScore: pens ? `${pf}\u2013${pa}` : null,
+        gf,
+        ga,
+        opp: us === "home" ? m.away : m.home,
+        stage: m.stage || "",
+        isGroup: /^group/i.test(m.stage || ""),
+      };
+    });
+}
 
-  const rowsFor = (team) => {
-    if (!team?.code) return null;
-    return (allMatches || [])
-      .filter((m) => m.state === "post" && m.id !== match.id && new Date(m.kickoff).getTime() < before)
-      .filter((m) => m.home.code === team.code || m.away.code === team.code)
-      .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))
-      .map((m) => {
-        const isHome = m.home.code === team.code;
-        const gf = isHome ? m.hg : m.ag;
-        const ga = isHome ? m.ag : m.hg;
-        const pf = isHome ? m.phg : m.pag;
-        const pa = isHome ? m.pag : m.phg;
-        const res = gf > ga ? "W" : gf < ga ? "L" : pf != null && pa != null ? (pf > pa ? "W" : "L") : "D";
-        return {
-          id: m.id,
-          res,
-          score: `${gf}–${ga}` + (pf != null && pa != null ? ` (${pf}–${pa}p)` : ""),
-          opp: isHome ? m.away : m.home,
-          stage: stageShort(m.stage),
-        };
-      });
+const record = (rows) => {
+  const n = (x) => rows.filter((r) => r.res === x).length;
+  return `W${n("W")} D${n("D")} L${n("L")}`;
+};
+
+/* A few lines of prose per team: how they got to this match. No AI needed —
+   the whole story is in the schedule. */
+export function RoadSoFar({ match, allMatches, standings }) {
+  const journey = (side) => {
+    const team = match[side];
+    if (!team?.code) return null; // unresolved knockout feeder
+    const rows = priorResults(match, allMatches, side);
+    if (!rows.length) return `${team.name} are opening their tournament here.`;
+
+    const groupRows = rows.filter((r) => r.isGroup);
+    const koRows = rows.filter((r) => !r.isGroup);
+    const parts = [];
+
+    // "won Group E (W2 D1 L0)" once the group is settled, else the results.
+    const g = team.group && standings?.[team.group];
+    const settled = g && g.length >= 2 && g.every((r) => (r.p ?? 0) >= 3);
+    const pos = settled ? g.findIndex((r) => r.team.code === team.code) + 1 : 0;
+    if (groupRows.length && pos > 0) {
+      const nth = ["", "winners", "runners-up", "3rd", "4th"][pos] || `${pos}th`;
+      parts.push(pos === 1 ? `won Group ${team.group} (${record(groupRows)})` : `came through Group ${team.group} as ${nth} (${record(groupRows)})`);
+    } else if (groupRows.length) {
+      parts.push(groupRows.map(resultPhrase).join(", then "));
+    }
+    for (const r of koRows) parts.push(`${resultPhrase(r)} in the ${stageProse(r.stage)}`);
+    return `${team.name} ${parts.join(", then ")}.`;
   };
 
-  /* "Won Group A" / "2nd in Group C" once the group is settled. */
-  const groupNote = (team) => {
-    const g = team?.group && standings?.[team.group];
-    if (!g || g.length < 2 || !g.every((r) => (r.p ?? 0) >= 3)) return null;
-    const pos = g.findIndex((r) => r.team.code === team.code) + 1;
-    return pos > 0 ? `${ordinalWord(pos)} Group ${team.group}` : null;
-  };
-
-  const home = rowsFor(match.home);
-  const away = rowsFor(match.away);
-  if (!home?.length && !away?.length) return null;
-
-  const resColor = (r) => (r === "W" ? "#3a7d2e" : r === "L" ? "var(--live)" : "#b58a1e");
-
-  const Column = ({ team, rows }) => (
-    <div style={{ minWidth: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-        <Flag team={team} size={16} />
-        <b style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{team?.name || "TBD"}</b>
-      </div>
-      <div style={{ fontSize: 11, color: "var(--saffron)", fontWeight: 600, marginBottom: 6, minHeight: 14 }}>
-        {groupNote(team) || ""}
-      </div>
-      {rows?.length ? rows.map((r) => (
-        <Link
-          key={r.id}
-          to={`/match/${r.id}`}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0", borderTop: "1px solid var(--line)", textDecoration: "none", color: "inherit", fontSize: 12 }}
-        >
-          <span style={{
-            width: 16, height: 16, borderRadius: 3, background: resColor(r.res), color: "#fff",
-            fontSize: 10, fontWeight: 800, lineHeight: "16px", textAlign: "center", flexShrink: 0,
-          }}>{r.res}</span>
-          <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 700, flexShrink: 0 }}>{r.score}</span>
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.opp?.name || "?"}</span>
-          <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 10, flexShrink: 0 }}>{r.stage}</span>
-        </Link>
-      )) : (
-        <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
-          {team?.code ? "First match of their tournament." : "Opponent to be decided."}
-        </p>
-      )}
-    </div>
-  );
+  const home = journey("home");
+  const away = journey("away");
+  if (!home && !away) return null;
 
   return (
     <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-      <div className="eyebrow" style={{ marginBottom: 8 }}>🛤 The road here</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-        <Column team={match.home} rows={home} />
-        <Column team={match.away} rows={away} />
-      </div>
+      <div className="eyebrow" style={{ marginBottom: 6 }}>{"\ud83d\udee4"} The road here</div>
+      {[home, away].filter(Boolean).map((text, i) => (
+        <p key={i} style={{ fontSize: 13, margin: i ? "8px 0 0" : 0 }}>{text}</p>
+      ))}
+    </div>
+  );
+}
+
+/* League flavour: how each club's last five games have gone. */
+export function FormBrief({ match, allMatches }) {
+  const brief = (side) => {
+    const team = match[side];
+    if (!team?.name) return null;
+    const rows = priorResults(match, allMatches, side).slice(-5);
+    if (!rows.length) return null;
+    const gf = rows.reduce((s, r) => s + (r.gf || 0), 0);
+    const ga = rows.reduce((s, r) => s + (r.ga || 0), 0);
+    const span = rows.length === 5 ? "their last five" : `their opening ${rows.length === 1 ? "game" : rows.length + " games"}`;
+    const last = rows[rows.length - 1];
+    return `${team.name} come in ${record(rows)} from ${span}, scoring ${gf} and conceding ${ga}. Last time out they ${resultPhrase(last)}.`;
+  };
+
+  const home = brief("home");
+  const away = brief("away");
+  if (!home && !away) return null;
+
+  return (
+    <div className="card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+      <div className="eyebrow" style={{ marginBottom: 6 }}>{"\ud83d\udcc8"} Form guide</div>
+      {[home, away].filter(Boolean).map((text, i) => (
+        <p key={i} style={{ fontSize: 13, margin: i ? "8px 0 0" : 0 }}>{text}</p>
+      ))}
     </div>
   );
 }

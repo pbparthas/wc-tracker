@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import AiCard from "../../components/AiCard.jsx";
-import { MatchGlance, TopPerformers, PredictionsCard, InjuriesCard } from "../../components/MatchParts.jsx";
+import { MatchGlance, TopPerformers, PredictionsCard, InjuriesCard, FormBrief } from "../../components/MatchParts.jsx";
 import { ScoreHeader, MatchTabsBar, TimelineTab, LineupsTab, StatsTab, InfoCard } from "../../components/MatchDetailShared.jsx";
 import { COMPETITIONS } from "../../data/competitions.js";
 import { fetchLeagueMatches, fetchLeagueSummary } from "../../lib/datasource.js";
@@ -115,6 +115,7 @@ export default function LeagueMatchDetailPage() {
           {upcoming && <AiCard title="Match preview" ai={preview} cta="✨ Write preview" />}
           {showPredictions && <PredictionsCard predictions={predictions} homeTeam={match.home} awayTeam={match.away} match={match} />}
           {showPredictions && <InjuriesCard injuries={injuries} homeTeam={match.home} awayTeam={match.away} homeId={match.apifHomeId} awayId={match.apifAwayId} />}
+          <FormBrief match={match} allMatches={allMatches} />
           {state === "post" && <AiCard title="Match recap" ai={recap} cta="✨ Write recap" />}
 
           {!upcoming && <MatchGlance stats={summary?.stats} />}
