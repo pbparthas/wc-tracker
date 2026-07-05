@@ -13,20 +13,22 @@ export function usePredictions(matchId) {
     if (cached) { setPredictions(cached); return undefined; }
     let on = true;
     let timer;
-    // One delayed retry: a single transient failure (throttle contention, a
-    // proxy blip) used to leave the win-probability meter absent for the whole
-    // visit — it only came back on a full reload.
-    const attempt = (retriesLeft) => {
+    // Retry with backoff for as long as the page is open: a "one retry then
+    // give up" policy left the win-probability meter missing for a whole live
+    // match after two early failures. Settles at a 5-minute cadence so a page
+    // parked days before kickoff stays cheap.
+    const DELAYS = [2500, 30000, 60000, 5 * 60 * 1000];
+    const attempt = (i) => {
       setLoading(true);
       fetchPredictions(matchId)
         .then((d) => {
           if (!on) return;
           if (d) { cacheSet(key, d, 60 * 60 * 1000); setPredictions(d); }
-          else if (retriesLeft > 0) timer = setTimeout(() => attempt(retriesLeft - 1), 2500);
+          else timer = setTimeout(() => attempt(Math.min(i + 1, DELAYS.length - 1)), DELAYS[i]);
         })
         .finally(() => { if (on) setLoading(false); });
     };
-    attempt(1);
+    attempt(0);
     return () => { on = false; clearTimeout(timer); };
   }, [matchId, key]);
 

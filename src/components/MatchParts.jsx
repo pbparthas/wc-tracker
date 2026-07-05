@@ -738,13 +738,16 @@ export function MatchGlance({ stats }) {
 /* ── Win probability + form (API-Football predictions) ───────────── */
 
 export function PredictionsCard({ predictions, homeTeam, awayTeam, match }) {
-  if (!predictions) return null;
-  const { percent, advice, homeForm, awayForm } = predictions;
-
   // Live matches: shift the pre-match prediction by the current score + minute,
   // so the meter reflects the game in progress instead of a stale kickoff number.
   const minute = match?.state === "in" ? parseMatchMinute(match.status) : null;
   const isLive = match?.state === "in" && minute != null;
+  // No pre-match data (the predictions call can fail and load late): during
+  // live play the meter still works from score + time with a neutral prior —
+  // it must not vanish mid-match. Pre-kickoff there's nothing to show.
+  if (!predictions && !isLive) return null;
+  const { percent: fetched, advice, homeForm, awayForm } = predictions || {};
+  const percent = fetched || { home: "33", draw: "34", away: "33" };
   const live = isLive ? liveWinProbability(percent, match.hg, match.ag, minute) : null;
   const homeW = live ? live.home : parseInt(percent?.home) || 0;
   const draw = live ? live.draw : parseInt(percent?.draw) || 0;
