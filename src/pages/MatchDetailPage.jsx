@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import AiCard from "../components/AiCard.jsx";
-import { TopPerformers, MatchGlance, PredictionsCard, InjuriesCard } from "../components/MatchParts.jsx";
+import { TopPerformers, MatchGlance, PredictionsCard, InjuriesCard, RoadSoFar } from "../components/MatchParts.jsx";
 import { ScoreHeader, MatchTabsBar, TimelineTab, LineupsTab, StatsTab, InfoCard } from "../components/MatchDetailShared.jsx";
 import { useSchedule } from "../hooks/useSchedule.js";
 import { useStandings } from "../hooks/useStandings.js";
@@ -110,6 +110,8 @@ export default function MatchDetailPage() {
               match is played, so a "top performers" ranking is meaningless until
               full-time. Live per-player ratings still show on the pitch view. */}
           {match.state === "post" && <TopPerformers lineups={summary?.lineups} playerStats={summary?.playerStats} />}
+
+          <RoadSoFar match={match} allMatches={matches} standings={standings} />
 
           {match.state !== "post" && <AiCard title="Head-to-head & form" ai={h2h} cta="✨ H2H & form" />}
 
