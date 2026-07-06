@@ -34,6 +34,19 @@ export function cacheRemove(key) {
   try { localStorage.removeItem(PREFIX + key); } catch { /* ignore */ }
 }
 
+/* Age of a cached entry in ms (null when absent) — lets a caller distinguish
+   a snapshot written seconds ago from one written mid-match last night. */
+export function cacheAgeMs(key) {
+  try {
+    const raw = localStorage.getItem(PREFIX + key);
+    if (!raw) return null;
+    const env = JSON.parse(raw);
+    return env.t ? Date.now() - env.t : null;
+  } catch {
+    return null;
+  }
+}
+
 /* User settings and UX flags survive a cache clear; only data does not.
    "favs" covers per-competition lists too (wc26:favs:epl, ...). */
 const KEEP = new Set(

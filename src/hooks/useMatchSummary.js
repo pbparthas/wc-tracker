@@ -5,8 +5,11 @@ import { useResume } from "./useResume.js";
 
 /* Finished matches cache forever; live matches poll every 60s; upcoming
    matches poll every 5min so the confirmed starting XI (published roughly an
-   hour before kickoff) appears without a reload. */
-export function useMatchSummary(eventId, state) {
+   hour before kickoff) appears without a reload. A match still marked "pre"
+   after its kickoff time is stale data (a card once needed two manual
+   refreshes to admit the match had started) — poll it at the live cadence. */
+export function useMatchSummary(eventId, state, kickoff) {
+  const kickedOff = kickoff && new Date(kickoff).getTime() < Date.now();
   const key = "sum:" + eventId;
   const [summary, setSummary] = useState(() => (eventId ? cacheGet(key) : null));
   const [loading, setLoading] = useState(false);
@@ -52,9 +55,9 @@ export function useMatchSummary(eventId, state) {
     if (state !== "in" && state !== "pre") return undefined;
     const t = setInterval(() => {
       if (!document.hidden) load();
-    }, state === "in" ? 60000 : 5 * 60 * 1000);
+    }, state === "in" || kickedOff ? 60000 : 5 * 60 * 1000);
     return () => clearInterval(t);
-  }, [eventId, state, key, load]);
+  }, [eventId, state, key, load, kickedOff]);
 
   useResume(() => {
     if (state === "in" || state === "pre") load();

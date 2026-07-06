@@ -3,7 +3,7 @@
    API-Football IDs are prefixed with "af-" to avoid collision with ESPN IDs. */
 import { resolveTeam } from "../data/teams.js";
 import { tableOrder } from "./thirdPlace.js";
-import { cacheGet, cacheSet, clearPrefix } from "./storage.js";
+import { cacheGet, cacheSet, cacheAgeMs, clearPrefix } from "./storage.js";
 import * as espn from "./espn.js";
 import * as apif from "./apifootball.js";
 
@@ -119,6 +119,17 @@ const ALL_FIXTURES_TTL = 60 * 1000;
 const FULL_REFRESH_MS = 10 * 60 * 1000;
 const ALL_FIXTURES_KEY = "apif:wc:fixtures";
 
+/* One transient blip at app-open used to push the whole schedule onto
+   fallbacks for a minute or more — a single retry kills most of those. */
+async function fetchWithRetry(params) {
+  try {
+    return await apif.fetchFixtures(apif.LEAGUES.worldcup, params);
+  } catch {
+    await new Promise((r) => setTimeout(r, 1500));
+    return apif.fetchFixtures(apif.LEAGUES.worldcup, params);
+  }
+}
+
 async function getAllFixtures(bust) {
   const now = Date.now();
   if (allFixturesCache && !bust && now - allFixturesFetchedAt < ALL_FIXTURES_TTL) {
@@ -140,7 +151,7 @@ async function getAllFixtures(bust) {
     // when a live fixture vanishes from live=all (it just finished — its
     // final score only exists in the full feed).
     if (allFixturesCache && now - allFixturesFullAt < FULL_REFRESH_MS) {
-      const live = await apif.fetchFixtures(apif.LEAGUES.worldcup, { live: true });
+      const live = await fetchWithRetry({ live: true });
       const liveIds = new Set(live.map((f) => f.id));
       const justFinished = allFixturesCache.some(
         (f) => mapState(f.status) === "in" && !liveIds.has(f.id)
@@ -153,7 +164,7 @@ async function getAllFixtures(bust) {
         return allFixturesCache;
       }
     }
-    const fixtures = await apif.fetchFixtures(apif.LEAGUES.worldcup, { season: 2026 });
+    const fixtures = await fetchWithRetry({ season: 2026 });
     allFixturesCache = fixtures;
     allFixturesFetchedAt = Date.now();
     allFixturesFullAt = Date.now();
@@ -174,13 +185,19 @@ export async function fetchScoreboard(fromYmd, toYmd, opts = {}) {
     const all = await getAllFixtures(opts.bust);
     return all.filter(inRange).map(fixtureToMatch);
   } catch {
-    // API-Football unavailable (commonly a rate-limit / quota). Prefer the last
-    // good API-Football snapshot; otherwise fall back to ESPN so the World Cup
-    // keeps working. ESPN's wrong knockout-round labels no longer matter — the
-    // bracket is built from the static 2026 skeleton and binds fixtures by date
-    // and team, so it stays correct whatever ESPN calls the rounds.
+    // API-Football unavailable even after a retry. The snapshot is only safe
+    // when RECENT (written by a poll moments ago — mid-session blip): a
+    // morning cold-open once served a snapshot written mid-match the night
+    // before, showing a finished game as LIVE and the next one as unstarted.
+    // Older than that, ESPN's live scoreboard is the truthful fallback — its
+    // wrong knockout-round labels no longer matter (the bracket binds fixtures
+    // to the static 2026 skeleton by date and team), and the chunk layer caps
+    // ESPN-sourced data at a 15-minute TTL so API-Football gets retried.
     const snapshot = cacheGet(ALL_FIXTURES_KEY);
-    if (snapshot) return snapshot.filter(inRange).map(fixtureToMatch);
+    const age = cacheAgeMs(ALL_FIXTURES_KEY);
+    if (snapshot && age != null && age < 10 * 60 * 1000) {
+      return snapshot.filter(inRange).map(fixtureToMatch);
+    }
     return espn.fetchScoreboard(fromYmd, toYmd, opts);
   }
 }

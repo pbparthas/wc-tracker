@@ -24,7 +24,7 @@ export default function MatchDetailPage() {
   const { matches, loading } = useSchedule();
   const { standings } = useStandings();
   const schedMatch = matches.find((m) => m.id === id);
-  const { summary, loading: sLoad } = useMatchSummary(id, schedMatch?.state);
+  const { summary, loading: sLoad } = useMatchSummary(id, schedMatch?.state, schedMatch?.kickoff);
   const match = schedMatch && summary?.match
     ? { ...schedMatch, state: summary.match.state, status: summary.match.status, hg: summary.match.hg ?? schedMatch.hg, ag: summary.match.ag ?? schedMatch.ag, phg: summary.match.phg ?? schedMatch.phg, pag: summary.match.pag ?? schedMatch.pag }
     : schedMatch || summary?.match || null;

@@ -42,12 +42,15 @@ export default function LeagueMatchDetailPage() {
     setLoading(false);
   }, [id, state, sumKey, C.slug]);
 
+  // A "pre" match past its kickoff time is stale data — poll at the live
+  // cadence until the state catches up.
+  const kickedOff = match?.kickoff && new Date(match.kickoff).getTime() < Date.now();
   useEffect(() => {
     if (!(state === "post" && cacheGet(sumKey))) load();
     if (state !== "in" && state !== "pre") return undefined;
-    const t = setInterval(() => { if (!document.hidden) load(); }, state === "in" ? 60000 : 5 * 60 * 1000);
+    const t = setInterval(() => { if (!document.hidden) load(); }, state === "in" || kickedOff ? 60000 : 5 * 60 * 1000);
     return () => clearInterval(t);
-  }, [state, load, sumKey]);
+  }, [state, load, sumKey, kickedOff]);
 
   useResume(() => { if (state === "in" || state === "pre") load(); });
 
