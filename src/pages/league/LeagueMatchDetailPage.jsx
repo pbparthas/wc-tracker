@@ -106,7 +106,7 @@ export default function LeagueMatchDetailPage() {
         eyebrow={eyebrow}
         events={summary?.events}
         teamHref={(t) => {
-          const cid = t === match.home ? match.apifHomeId : match.apifAwayId;
+          const cid = (t === match.home ? match.apifHomeId : match.apifAwayId) ?? t?.espnId;
           return cid != null ? `/league/${C.id}/club/${cid}` : null;
         }}
       />

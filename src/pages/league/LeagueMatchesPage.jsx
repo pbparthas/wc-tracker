@@ -33,19 +33,26 @@ function DayGroups({ groups, isFav, linkBase }) {
   ));
 }
 
-/* "Regular Season - 5" / "League Stage - 5" → "Matchday 5"; knockout labels
-   pass through as-is. */
-function roundLabel(stage) {
+/* "Regular Season - 5" / "League Stage - 5" → "Matchday 5". Returns null when
+   there's no usable matchday number (ESPN's league scoreboard carries none),
+   so the grouping can fall back to calendar months. */
+function matchdayLabel(stage) {
   const m = /-\s*(\d+)\s*$/.exec(stage || "");
   if (m && /season|stage/i.test(stage)) return `Matchday ${m[1]}`;
-  return stage || "Fixtures";
+  if (stage && /final|semi|quarter|round of|play-?off|group/i.test(stage)) return stage;
+  return null;
 }
 
-/* Group a (kickoff-sorted) list into matchday rounds, preserving order. */
+const monthLabel = (iso) =>
+  new Date(iso).toLocaleDateString("en-IN", { timeZone: IST, month: "long", year: "numeric" });
+
+/* Group a (kickoff-sorted) list into collapsible sections: by matchday when the
+   feed labels them (API-Football), otherwise by month (ESPN), so a season's
+   fixtures never collapse into one undifferentiated pile. */
 function groupByRound(list) {
   const rounds = new Map();
   for (const m of list) {
-    const key = roundLabel(m.stage);
+    const key = matchdayLabel(m.stage) || monthLabel(m.kickoff);
     if (!rounds.has(key)) rounds.set(key, []);
     rounds.get(key).push(m);
   }
@@ -204,7 +211,7 @@ export default function LeagueMatchesPage() {
 
       {matches?.length > 0 && (
         <p style={{ fontSize: 11, color: "var(--muted)", margin: "10px 0 20px" }}>
-          Updated {new Date().toLocaleTimeString("en-IN", { timeZone: IST })} IST · data from API-Football
+          Updated {new Date().toLocaleTimeString("en-IN", { timeZone: IST })} IST · live scores
           {anyLive ? " · auto-refreshes during live play" : ""}
         </p>
       )}

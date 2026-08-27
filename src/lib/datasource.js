@@ -6,6 +6,7 @@ import { tableOrder } from "./thirdPlace.js";
 import { cacheGet, cacheSet, cacheAgeMs, clearPrefix } from "./storage.js";
 import * as espn from "./espn.js";
 import * as apif from "./apifootball.js";
+import * as leagueSeason from "./leagueSchedule.js";
 
 const ID_PREFIX = "af-";
 
@@ -539,42 +540,27 @@ function apifLeagueFor(espnSlug) {
   return APIF_LEAGUE_MAP[espnSlug] || null;
 }
 
-let leagueFixturesCache = {};
-let leagueFixturesFetchedAt = {};
-const LEAGUE_FIXTURES_TTL = 5 * 60 * 1000;
-
 export async function fetchLeagueMatches(espnSlug, opts = {}) {
   const al = apifLeagueFor(espnSlug);
-  if (!al) return espn.fetchLeagueMatches(espnSlug, opts);
-  const snapKey = `apif:league:${al.id}:${al.season}`;
-  try {
-    const now = Date.now();
-    const cacheKey = `${al.id}:${al.season}`;
-    if (
-      leagueFixturesCache[cacheKey] &&
-      !opts.bust &&
-      now - (leagueFixturesFetchedAt[cacheKey] || 0) < LEAGUE_FIXTURES_TTL
-    ) {
-      return leagueFixturesCache[cacheKey];
-    }
-    const fixtures = await apif.fetchFixtures(al.id, { season: al.season });
-    const matches = fixtures.map(fixtureToMatch);
-    leagueFixturesCache[cacheKey] = matches;
-    leagueFixturesFetchedAt[cacheKey] = now;
-    // 30 days: the snapshot's job is surviving bad stretches (slow mobile
-    // links time the ~1 MB season download out repeatedly) — a stale full
-    // fixture list beats ESPN's near-term scoreboard every time.
-    if (matches.length) cacheSet(snapKey, matches, 30 * 24 * 60 * 60 * 1000);
-    return matches;
-  } catch {
-    // One API-Football blip must not swap the full season for ESPN's
-    // scoreboard (it only lists near-term events, so a 380-fixture list
-    // silently became a single match). Serve the last good API-Football
-    // snapshot; ESPN only when we've never had one.
-    const snap = cacheGet(snapKey);
-    if (snap?.length) return snap;
-    return espn.fetchLeagueMatches(espnSlug, opts);
+  // API-Football is now an ENHANCEMENT, not the primary source. Its free tier
+  // serves nothing past the 2023 season, so an unsubscribed account returns an
+  // error or an empty list for the current season — either way we fall through
+  // to ESPN. When a paid plan IS active it comes back with the season and we
+  // use its richer data (team ids, round labels).
+  if (al) {
+    try {
+      const fixtures = await apif.fetchFixtures(al.id, { season: al.season });
+      if (fixtures.length) {
+        const matches = fixtures.map(fixtureToMatch);
+        cacheSet(`apif:league:${al.id}:${al.season}`, matches, 30 * 24 * 60 * 60 * 1000);
+        return matches;
+      }
+    } catch { /* out of plan / blip — ESPN below */ }
   }
+  // ESPN primary: the whole season swept in monthly date-chunks. ESPN's plain
+  // scoreboard returns only the current matchday, which is why the Matches tab
+  // was showing a single fixture.
+  return leagueSeason.fetchLeagueSeason(espnSlug, opts);
 }
 
 export async function fetchLeagueSummary(eventId, espnSlug) {

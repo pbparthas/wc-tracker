@@ -14,13 +14,15 @@ export default function MatchRow({ m, fav = false, linkBase = "/match" }) {
   const clickable = !m.placeholder && !!m.id;
   const go = () => clickable && navigate(`${linkBase}/${m.id}`);
 
-  // Team names deep-link to their own page: World Cup sides by team code,
-  // club sides by API-Football id (the club-page route id), derived from the
-  // league the card lives in. Placeholder sides ("Winner Match 74") get none.
+  // Team names deep-link to their own page: World Cup sides by team code, club
+  // sides by their club-page id — the API-Football team id when the feed is
+  // API-Football, or the ESPN id when the match came from ESPN (the clubs list
+  // and the club page use whichever id space the match did). Placeholder sides
+  // ("Winner Match 74") get none.
   const teamPage = (team) => {
     if (team?.code) return `/team/${team.code}`;
     const league = /^(\/league\/[^/]+)\/match$/.exec(linkBase || "");
-    const cid = team === m.home ? m.apifHomeId : m.apifAwayId;
+    const cid = (team === m.home ? m.apifHomeId : m.apifAwayId) ?? team?.espnId;
     return league && cid != null ? `${league[1]}/club/${cid}` : null;
   };
   const TeamName = ({ team, right }) => {
@@ -53,7 +55,7 @@ export default function MatchRow({ m, fav = false, linkBase = "/match" }) {
       onKeyDown={clickable ? (e) => e.key === "Enter" && go() : undefined}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-        <span className="eyebrow">{m.stage}{m.matchNo ? " · M" + m.matchNo : ""}{m.city ? " · " + m.city : ""}</span>
+        <span className="eyebrow">{[/^(match|fixtures)$/i.test(m.stage || "") ? "" : m.stage, m.matchNo ? "M" + m.matchNo : "", m.city].filter(Boolean).join(" · ")}</span>
         <StatusPill status={m.status} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 8 }}>
