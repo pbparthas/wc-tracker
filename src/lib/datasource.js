@@ -599,12 +599,31 @@ export async function fetchLeagueTable(espnSlug) {
   }
 }
 
-/* League scoring/assist leaders (API-Football only — no ESPN equivalent here). */
+/* League scoring / assist leaders. API-Football when subscribed (photos +
+   richer stats); ESPN's /leaders endpoint is the $0 fallback. */
+function espnLeaderRow(g, i, metric) {
+  return {
+    rank: i + 1,
+    player: g.player,
+    photo: null,
+    team: g.team?.name || "",
+    teamLogo: g.team?.logo || null,
+    goals: metric === "goals" ? g.value : 0,
+    assists: metric === "assists" ? g.value : 0,
+  };
+}
+
 export async function fetchLeagueScorers(espnSlug) {
   const al = apifLeagueFor(espnSlug);
-  if (!al) return [];
+  if (al) {
+    try {
+      const rows = await apif.fetchTopScorers(al.id, al.season);
+      if (rows.length) return rows;
+    } catch { /* out of plan — ESPN below */ }
+  }
   try {
-    return await apif.fetchTopScorers(al.id, al.season);
+    const { goals } = await espn.fetchScorers(espnSlug);
+    return goals.map((g, i) => espnLeaderRow(g, i, "goals"));
   } catch {
     return [];
   }
@@ -612,9 +631,15 @@ export async function fetchLeagueScorers(espnSlug) {
 
 export async function fetchLeagueAssists(espnSlug) {
   const al = apifLeagueFor(espnSlug);
-  if (!al) return [];
+  if (al) {
+    try {
+      const rows = await apif.fetchTopAssists(al.id, al.season);
+      if (rows.length) return rows;
+    } catch { /* out of plan — ESPN below */ }
+  }
   try {
-    return await apif.fetchTopAssists(al.id, al.season);
+    const { assists } = await espn.fetchScorers(espnSlug);
+    return assists.map((g, i) => espnLeaderRow(g, i, "assists"));
   } catch {
     return [];
   }

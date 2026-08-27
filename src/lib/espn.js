@@ -417,10 +417,10 @@ export async function fetchTransactions(league) {
 
 /* Golden Boot. ESPN exposes leaders under a couple of shapes/hosts; try each and
    parse tolerantly. Throws only if nothing usable is found. */
-export async function fetchScorers() {
+export async function fetchScorers(league = LEAGUE) {
   const candidates = [
-    `${ESPN}/site/v2/sports/${LEAGUE}/leaders`,
-    `https://site.web.api.espn.com/apis/site/v2/sports/${LEAGUE}/leaders`,
+    `${ESPN}/site/v2/sports/${league}/leaders`,
+    `https://site.web.api.espn.com/apis/site/v2/sports/${league}/leaders`,
   ];
   for (const url of candidates) {
     try {

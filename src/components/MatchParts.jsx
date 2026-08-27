@@ -934,15 +934,20 @@ function resultPhrase(r) {
   return `drew ${r.score} with ${opp}`;
 }
 
-/* A team's finished matches before this one, oldest first. Sides are matched
-   by country code (World Cup) or API-Football team id (clubs). */
+/* A team's finished matches before this one, oldest first. Sides are matched by
+   country code (World Cup) or club id — the API-Football team id when the feed
+   is API-Football, or the ESPN id when it's ESPN, whichever this match uses. */
 function priorResults(match, allMatches, side) {
   const team = match[side];
-  const teamApifId = side === "home" ? match.apifHomeId : match.apifAwayId;
+  const teamId = (side === "home" ? match.apifHomeId : match.apifAwayId) ?? team?.espnId;
   const before = new Date(match.kickoff).getTime();
+  const idOf = (m, s) => (s === "home" ? m.apifHomeId : m.apifAwayId) ?? m[s]?.espnId;
   const isOurs = (m) => {
     if (team?.code) return m.home.code === team.code ? "home" : m.away.code === team.code ? "away" : null;
-    if (teamApifId != null) return m.apifHomeId === teamApifId ? "home" : m.apifAwayId === teamApifId ? "away" : null;
+    if (teamId != null) {
+      if (String(idOf(m, "home")) === String(teamId)) return "home";
+      if (String(idOf(m, "away")) === String(teamId)) return "away";
+    }
     return null;
   };
   return (allMatches || [])

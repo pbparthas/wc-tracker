@@ -245,11 +245,15 @@ export default function ClubPage() {
       </>
     );
 
+  // The injury feed is API-Football only; with no subscription (ESPN-sourced
+  // club) there's nothing to show, so the tab is dropped rather than left to
+  // always read "no injuries".
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "squad", label: "Squad" },
-    { id: "injuries", label: "Injuries" },
+    ...(apifId ? [{ id: "injuries", label: "Injuries" }] : []),
   ];
+  const activeTab = tabs.find((t) => t.id === tab) ? tab : "overview";
 
   return (
     <div className="wrap" style={{ paddingTop: 14 }}>
@@ -287,9 +291,9 @@ export default function ClubPage() {
         )}
       </div>
 
-      <MatchTabsBar tabs={tabs} active={tab} onTab={setTab} />
+      <MatchTabsBar tabs={tabs} active={activeTab} onTab={setTab} />
 
-      {tab === "overview" && (
+      {activeTab === "overview" && (
         <>
           <FactsCard info={info} club={club} />
           <SeasonStrip history={history} />
@@ -315,7 +319,7 @@ export default function ClubPage() {
         </>
       )}
 
-      {tab === "squad" && (
+      {activeTab === "squad" && (
         <>
           <div className="card" style={{ padding: "6px 14px 12px" }}>
             <SquadList players={squadPlayers} loading={squad.loading} onPick={setPicked} emptyNote="Squad list isn't available from the feed right now." />
@@ -330,7 +334,7 @@ export default function ClubPage() {
         </>
       )}
 
-      {tab === "injuries" && (
+      {activeTab === "injuries" && (
         <div className="card" style={{ padding: "6px 14px 12px", marginBottom: 20 }}>
           <InjuryList injuries={injuries.data} loading={injuries.loading} clubName={club.name} />
         </div>
